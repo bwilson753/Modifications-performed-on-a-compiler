@@ -1,0 +1,2293 @@
+Robert Wilson
+CS451
+HW4
+
+First run ant clean
+Second run ant
+Third run ant compilerTestsJavaCC
+
+The first problem with trying to run j--.jj is it is not formatted to accept
+the modifications created in the previous homework.  So j--.jj should be
+modified so that j--.jj compiles properly.
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->ant testJavaCCScanner
+Buildfile: C:\Users\bwils_000\Desktop\eclipse projects\j--\build.xml
+
+javacc:
+     [echo] Generating JavaCC files...
+   [javacc] Java Compiler Compiler Version 4.0 (Parser Generator)
+   [javacc] (type "javacc" with no arguments for help)
+   [javacc] Reading from file C:\Users\bwils_000\Desktop\eclipse projects\j--\src\jminusminus\j--.jj . . .
+   [javacc] Warning: Choice conflict in (...)* construct at line 311, column 9.
+   [javacc]          Expansion nested within construct and expansion following construct
+   [javacc]          have common prefixes, one of which is: "."
+   [javacc]          Consider using a lookahead of 2 or more for nested expansion.
+   [javacc] File "TokenMgrError.java" does not exist.  Will create one.
+   [javacc] File "ParseException.java" does not exist.  Will create one.
+   [javacc] File "Token.java" does not exist.  Will create one.
+   [javacc] File "SimpleCharStream.java" does not exist.  Will create one.
+   [javacc] Parser generated with 0 errors and 1 warnings.
+
+compileJavaCC:
+     [echo] Compiling j-- source files...
+    [javac] Compiling 9 source files to C:\Users\bwils_000\Desktop\eclipse projects\j--\classes
+    [javac] C:\Users\bwils_000\Desktop\eclipse projects\j--\src\jminusminus\JavaCCParser.java:335: error: constructor JClassDeclaration in class JClassDeclaration cannot be applied to given types;
+    [javac]         {if (true) return new JClassDeclaration( line, mods,
+    [javac]                           ^
+    [javac]   required: int,ArrayList<String>,String,Type,ArrayList<JMember>,ArrayList<Type>
+    [javac]   found: int,ArrayList<String>,String,Type,ArrayList<JMember>
+    [javac]   reason: actual and formal argument lists differ in length
+    [javac] C:\Users\bwils_000\Desktop\eclipse projects\j--\src\jminusminus\JavaCCParser.java:393: error: constructor JConstructorDeclaration in class JConstructorDeclaration cannot be applied to given types;
+    [javac]                 new JConstructorDeclaration( line, mods,
+    [javac]                 ^
+    [javac]   required: int,ArrayList<String>,String,ArrayList<JFormalParameter>,JBlock,ArrayList<Type>
+    [javac]   found: int,ArrayList<String>,String,ArrayList<JFormalParameter>,JBlock
+    [javac]   reason: actual and formal argument lists differ in length
+    [javac] C:\Users\bwils_000\Desktop\eclipse projects\j--\src\jminusminus\JavaCCParser.java:429: error: constructor JMethodDeclaration in class JMethodDeclaration cannot be applied to given types;
+    [javac]                    new JMethodDeclaration( line, mods, name,
+    [javac]                    ^
+    [javac]   required: int,ArrayList<String>,String,Type,ArrayList<JFormalParameter>,JBlock,ArrayList<Type>
+    [javac]   found: int,ArrayList<String>,String,Type,ArrayList<JFormalParameter>,JBlock
+    [javac]   reason: actual and formal argument lists differ in length
+    [javac] Note: C:\Users\bwils_000\Desktop\eclipse projects\j--\src\jminusminus\JavaCCParser.java uses unchecked or unsafe operations.
+    [javac] Note: Recompile with -Xlint:unchecked for details.
+    [javac] 3 errors
+
+BUILD FAILED
+C:\Users\bwils_000\Desktop\eclipse projects\j--\build.xml:67: Compile failed; see the compiler error output for details.
+
+Total time: 6 seconds
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+First, modify JClassDeclaration.  Note that it is still not capable of actually
+executing implements, but the details of dealing with this can be dealt with
+during question 3.
+
+private JClassDeclaration classDeclaration( ArrayList<String> mods ): {
+    int line = 0;
+    String name = "";
+    Type superClass = Type.OBJECT;
+    ArrayList<JMember> classBody = null;
+    ArrayList<jminusminus.Type> interfaces = null;//ADDED
+}
+{
+    try {
+        <CLASS> { line = token.beginLine; }
+        <IDENTIFIER> { name = token.image; }
+        [ 
+            <EXTENDS> superClass = qualifiedIdentifier() 
+        ]
+       // [	//Note that it was initialized to null and not a new ArrayList 
+       //     <IMPLEMENTS> interfaces.add(qualifiedIdentifier());//ADDED
+       // ]
+        classBody = classBody()           
+    } 
+    catch ( ParseException e ) { 
+        recoverFromError( new int[] { SEMI, EOF }, e ); 
+    }
+    { //interfaces ADDED
+        return new JClassDeclaration( line, mods, 
+            name, superClass, classBody, interfaces ); 
+    }
+}
+
+Likewise, since exceptions will not be considered, only enough modifications
+need to be made so that JavaCC will build properly.
+
+private JMember memberDecl( ArrayList<String>  mods ): {
+    int line = 0;
+    Type type = null;
+    String name = "";
+    ArrayList<JFormalParameter> params = null;
+    JBlock body = null;
+    ArrayList<JVariableDeclarator> variableDeclarators = null;
+    JMember memberDecl = null;
+    ArrayList<jminusminus.Type> excepts = null;//ADDED
+}
+{
+    try {
+        LOOKAHEAD( <IDENTIFIER> <LPAREN> )
+        (
+            <IDENTIFIER> 
+            { 
+                line = token.beginLine; 
+                name = token.image; 
+            } 
+            params = formalParameters() 
+            body = block()
+            { 
+                memberDecl = 
+                new JConstructorDeclaration( line, mods, 
+                                             name, params, body, excepts );
+            }													//excepts ADDED
+        ) |     
+        LOOKAHEAD( ( <VOID> | type() ) <IDENTIFIER> <LPAREN> )
+        (
+            ( 
+                <VOID> { type = Type.VOID; } | 
+                type = type() 
+            ) 
+            { line = token.beginLine; }
+            <IDENTIFIER> { name = token.image; } 
+            params = formalParameters() 
+            ( 
+                body = block() | 
+                <SEMI> 
+            )
+            { 
+                memberDecl = 
+                   new JMethodDeclaration( line, mods, name, 
+                                           type, params, body, excepts ); 
+            } 												//excepts ADDED
+        ) | 
+        ( 
+
+Now the proper build can be seen using >ant testJavaCCScanner, however it can
+be seen that tokens need to be added.
+
+    [junit] ------------- ---------------- ---------------
+    [junit] ------------- Standard Error -----------------
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Division.java:4: Unidentified input token: '/'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntBitwise.java:5: Unidentified input token: '&'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntBitwise.java:8: Unidentified input token: '|'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntBitwise.java:11: Unidentified input token: '^'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Modulo.java:4: Unidentified input token: '%'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\MultiComments.java:6: Unidentified input token: '/'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\MultiComments.java:8: Unidentified input token: '/'
+    [junit] ------------- ---------------- ---------------
+    [junit]
+    [junit] Testcase: testPass took 1.212 sec
+    [junit]     FAILED
+    [junit] null
+    [junit] junit.framework.AssertionFailedError
+    [junit]     at junit.JavaCCScannerTest.testPass(JavaCCScannerTest.java:47)
+    [junit]
+    [junit] Test junit.JavaCCScannerTest FAILED
+
+BUILD SUCCESSFUL
+Total time: 10 seconds
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+Note that since the build is successful, the inability to scan certain tokens
+is irrelevant because they are not necessary to complete the assignment.
+
+Further, the more comprehensive runCompilerTestsJavaCC can be run producing,
+
+    [junit] ------------- ---------------- ---------------
+    [junit]
+    [junit] Testcase: testPass took 0.807 sec
+    [junit]     FAILED
+    [junit] null
+    [junit] junit.framework.AssertionFailedError
+    [junit]     at junit.JMinusMinusTestJavaCC.testPass(JMinusMinusTestJavaCC.java:52)
+    [junit]
+    [junit] Testcase: testFail took 0.599 sec
+    [junit] Test junit.JMinusMinusTestJavaCC FAILED
+    [javac] Compiling 1 source file to C:\Users\bwils_000\Desktop\eclipse projects\j--\classes
+    [junit] Running junit.JMinusMinusTestRunner
+    [junit] Testsuite: junit.JMinusMinusTestRunner
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 sec
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 sec
+    [junit]
+    [junit] Testcase: testMessage took 0.003 sec
+    [junit] Testcase: testFactorial took 0.003 sec
+    [junit] Testcase: testCompute took 0.004 sec
+    [junit] Testcase: testComputeSum took 0.002 sec
+    [junit] Testcase: testMessage took 0.007 sec
+    [junit] Testcase: testDivide took 0.004 sec
+    [junit] Testcase: testModulo took 0.003 sec
+    [junit] Testcase: testUnaryPlus took 0.002 sec
+    [junit] Testcase: testIntBitwise took 0.003 sec
+
+BUILD SUCCESSFUL
+Total time: 10 seconds
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+Once again junit fails but the build is still successful.  This is because the
+tests were all designed to test the handwritten scanner and parser and j--.jj
+was not being considered.  Therefore, it is necessary to create new tests
+specifically designed for j--.jj
+
+The first test that ought to be built for j--.jj is a test for doubles and
+floats.  This can be created by modified the Literals.java class in the fail
+folder.
+
+package fail;
+
+///*The following tests to see if literals values are
+// * scanned but then thrown an error message.
+// */
+public class Literals {
+	
+	//body commented out so that build output is not so long
+	public static void main(String[] args){
+		int ai = 5;
+		double a = 5.0;//1
+		double b = .124598;//2
+		float bf = .12837f;//tests for float starting with a decimal
+//		double c = 3.14e;//should skip
+		double d = 3.14e-6;//3
+		float e = 3.14f;//4
+		float f = 3.14F;//5
+		double g = 3.14d;//6
+		double h = 3.14D;//7
+		float i = 3.14e-6f;//8
+		double j = 3.14e+653d;//9
+		double k = 3.14e-628;//10
+//		int l = 27;//should be fine
+//		int m = 0;//should be fine
+//		int n = 05;//11 (octal 1)
+//		int o = 0000408;//12 (octal 2)
+//		int p = 0x25;//13 (octal 3, hex 1)
+//		int q = 000x25;//(octal, then identifier)
+//		int r = 0x00034;//(octal 5, hex 2)
+//		int s = 0981;//(octal 6, error octal)
+//		
+//		long ll = 27l;//should be fine
+//		//long ml = 0;//should be fine
+//		long nl = 05L;//11 (octal 1)
+//		long ol = 0000408l;//12 (octal 2)
+//		long pl = 0x25L;//13 (octal 3, hex 1)
+//		long ql = 000x25l;//(reads octal, then identifier)
+//		long rl = 0x0Ab3fL;//(octal 5, hex 2)
+//		long sl = 0981L;//(octal 6, error octal)
+//		long sli = 0981L123;//(triggers an error then reads an int literal)
+//		
+//		long ml = 0l;//should be fine*SPECIAL CASE
+//		
+		float lf = 27f;//should be fine
+//		//long ml = 0;//should be fine
+		float nf = 05F;//11 (octal 1)
+		float of = 0000408f;//12 (octal 2)
+		float pf = 0x25F;//13 (octal 3, hex 1)
+		float qf = 000x25f;//(interprets int, then hex)
+		float rf = 0x0Ab3ff;//(octal 5, hex 2)
+//		float sf = 0981F;//(octal 6, error octal)
+//		float sfi = 0981F456;//(octal error, then reads integer
+//		
+//		float sbf = 0771F;//(octal 6, error octal)
+		float mf = 0f;//should be fine*SPECIAL CASE
+//		
+		float tf = 0xc5.1D3f;
+		float scf = 0.12e-3f;
+		double sd = 0.12e+3;
+//		
+		double td = 123e-5d;
+		float uf = 234e3f;
+		double ud = 123e+5;
+//		
+//		float vf = 123p5;//it sould throw an error because p is used without hex
+//		double vdf = 12.3p+5;//it sould throw an error because p is used without hex
+		float wf = 0x456p2F;
+		float vd = 0x789p-3;
+		
+		float wf = 0x45.6p2F;
+		float vd = 0x78.9p-3;
+				
+        double ud = 314e2;
+        double vd = 567D;
+	}
+}
+
+Note that certain tests, such as for errors, have been omitted because they
+tested for errors to be executed by scanner.
+
+First add the reserved words:
+
+| < DOUBLE: "double" > //ADDED
+| < FLOAT: "float" > //ADDED
+
+Then modify token:
+
+TOKEN:
+{ 
+  < INT_LITERAL: ("0" | <NON_ZERO_DIGIT> (<DIGIT>)*) >
+|  < FLOAT_LITERAL: ( (<DIGIT> (<DIGIT>)* ["f","F"])
+					| (<DIGIT> (<DIGIT>)* ["e","E"] ["+","-"] <DIGIT> (<DIGIT>)* ["f","F"])
+					| (<DIGIT> (<DIGIT>)* ["e","E"] <DIGIT> (<DIGIT>)* ["f","F"])
+					|(<DIGIT>)* ["."] (<DIGIT>)* ["f","F"]
+					|(<DIGIT>)* ["."] (<DIGIT>)* ["e","E"] ["+","-"] <DIGIT> (<DIGIT>)* ["f","F"] 
+					|(<DIGIT>)* ["."] (<DIGIT>)* ["e","E"] <DIGIT> (<DIGIT>)* ["f","F"]
+					| "0" (<ODIGIT>)* ["f","F"]//begin octal
+					|"0" (<ODIGIT>)* ["."] (<ODIGIT>)* ["f","F"]
+					|"0" <HEXSTART> <HEX> (<HEX>)* ["f","F"] //begin hex
+					|"0" <HEXSTART> (<HEX> (<HEX>)* ["p","P"] ["+","-"] <HEX> (<HEX>)* ["f","F"])
+					|"0" <HEXSTART> (<HEX> (<HEX>)* ["p","P"] ["+","-"] <HEX> (<HEX>)*)
+					|"0" <HEXSTART> (<HEX> (<HEX>)* ["p","P"] <HEX> (<HEX>)* ["f","F"])
+					|"0" <HEXSTART> (<HEX> (<HEX>)* ["p","P"] <HEX> (<HEX>)*)
+					|"0" <HEXSTART> (<HEX>)* ["."] (<HEX>)* ["f","F"]
+					|"0" <HEXSTART> (<HEX>)* ["."] (<HEX>)* ["p","P"] ["+","-"] <HEX> (<HEX>)* ["f","F"] 
+					|"0" <HEXSTART> (<HEX>)* ["."] (<HEX>)* ["p","P"] ["+","-"] <HEX> (<HEX>)* 
+					|"0" <HEXSTART> (<HEX>)* ["."] (<HEX>)* ["p","P"] <HEX> (<HEX>)* ["f","F"]
+					|"0" <HEXSTART> (<HEX>)* ["."] (<HEX>)* ["p","P"] <HEX> (<HEX>)* 
+					)>
+| < DOUBLE_LITERAL: (<DIGIT>)* (["."](<DIGIT>)*  
+								| ["."](<DIGIT>)* ["d","D"] //must pick d or D
+								| (["."](<DIGIT>)* ["e","E"] ["+","-"] <DIGIT> (<DIGIT>)* ["d","D"])
+								| (["."](<DIGIT>)* ["e","E"] (<DIGIT>)* ["d","D"])
+								| (["."](<DIGIT>)* ["e","E"] ["+","-"] <DIGIT> (<DIGIT>)*)
+								| (["."](<DIGIT>)* ["e","E"] <DIGIT> (<DIGIT>)*)
+								| ((<DIGIT>)* ["e","E"] ["+","-"] <DIGIT> (<DIGIT>)* ["d","D"])
+								| ((<DIGIT>)* ["e","E"] (<DIGIT>)* ["d","D"])
+								| ((<DIGIT>)* ["e","E"] ["+","-"] <DIGIT> (<DIGIT>)*)
+								| ((<DIGIT>)* ["e","E"] <DIGIT> (<DIGIT>)*)
+								| ("d" | "D"))>
+| < CHAR_LITERAL: "'" (<ESC> | ~["'","\\","\n","\r"]) "'" >
+| < STRING_LITERAL: "\"" (<ESC> | ~["\"","\\","\n","\r"])* "\"" >   
+| < #ESC: "\\" ["n","t","b","r","f","\\","'","\""] >
+}
+Note that the code assumes the standards of appendix C.  So, for example,
+anything that uses the p modifier is interpreted as a double.  Other versions
+of java interpret this as a double. Here are the results of testing:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -t tests\fail\Literals.java
+1        : "package" = package
+1        : <IDENTIFIER> = fail
+1        : ";" = ;
+6        : "public" = public
+6        : "class" = class
+6        : <IDENTIFIER> = Literals
+6        : "{" = {
+9        : "public" = public
+9        : "static" = static
+9        : "void" = void
+9        : <IDENTIFIER> = main
+9        : "(" = (
+9        : <IDENTIFIER> = String
+9        : "[" = [
+9        : "]" = ]
+9        : <IDENTIFIER> = args
+9        : ")" = )
+9        : "{" = {
+10       : "int" = int
+10       : <IDENTIFIER> = ai
+10       : "=" = =
+10       : <INT_LITERAL> = 5
+10       : ";" = ;
+11       : "double" = double
+11       : <IDENTIFIER> = a
+11       : "=" = =
+11       : <DOUBLE_LITERAL> = 5.0
+11       : ";" = ;
+12       : "double" = double
+12       : <IDENTIFIER> = b
+12       : "=" = =
+12       : <DOUBLE_LITERAL> = .124598
+12       : ";" = ;
+13       : "float" = float
+13       : <IDENTIFIER> = bf
+13       : "=" = =
+13       : <FLOAT_LITERAL> = .12837f
+13       : ";" = ;
+15       : "double" = double
+15       : <IDENTIFIER> = d
+15       : "=" = =
+15       : <DOUBLE_LITERAL> = 3.14e-6
+15       : ";" = ;
+16       : "float" = float
+16       : <IDENTIFIER> = e
+16       : "=" = =
+16       : <FLOAT_LITERAL> = 3.14f
+16       : ";" = ;
+17       : "float" = float
+17       : <IDENTIFIER> = f
+17       : "=" = =
+17       : <FLOAT_LITERAL> = 3.14F
+17       : ";" = ;
+18       : "double" = double
+18       : <IDENTIFIER> = g
+18       : "=" = =
+18       : <DOUBLE_LITERAL> = 3.14d
+18       : ";" = ;
+19       : "double" = double
+19       : <IDENTIFIER> = h
+19       : "=" = =
+19       : <DOUBLE_LITERAL> = 3.14D
+19       : ";" = ;
+20       : "float" = float
+20       : <IDENTIFIER> = i
+20       : "=" = =
+20       : <FLOAT_LITERAL> = 3.14e-6f
+20       : ";" = ;
+21       : "double" = double
+21       : <IDENTIFIER> = j
+21       : "=" = =
+21       : <DOUBLE_LITERAL> = 3.14e+653d
+21       : ";" = ;
+22       : "double" = double
+22       : <IDENTIFIER> = k
+22       : "=" = =
+22       : <DOUBLE_LITERAL> = 3.14e-628
+22       : ";" = ;
+44       : "float" = float
+44       : <IDENTIFIER> = lf
+44       : "=" = =
+44       : <FLOAT_LITERAL> = 27f
+44       : ";" = ;
+46       : "float" = float
+46       : <IDENTIFIER> = nf
+46       : "=" = =
+46       : <FLOAT_LITERAL> = 05F
+46       : ";" = ;
+47       : "float" = float
+47       : <IDENTIFIER> = of
+47       : "=" = =
+47       : <FLOAT_LITERAL> = 0000408f
+47       : ";" = ;
+48       : "float" = float
+48       : <IDENTIFIER> = pf
+48       : "=" = =
+48       : <FLOAT_LITERAL> = 0x25F
+48       : ";" = ;
+49       : "float" = float
+49       : <IDENTIFIER> = qf
+49       : "=" = =
+49       : <INT_LITERAL> = 0
+49       : <INT_LITERAL> = 0
+49       : <FLOAT_LITERAL> = 0x25f
+49       : ";" = ;
+50       : "float" = float
+50       : <IDENTIFIER> = rf
+50       : "=" = =
+50       : <FLOAT_LITERAL> = 0x0Ab3ff
+50       : ";" = ;
+55       : "float" = float
+55       : <IDENTIFIER> = mf
+55       : "=" = =
+55       : <FLOAT_LITERAL> = 0f
+55       : ";" = ;
+57       : "float" = float
+57       : <IDENTIFIER> = tf
+57       : "=" = =
+57       : <FLOAT_LITERAL> = 0xc5.1D3f
+57       : ";" = ;
+58       : "float" = float
+58       : <IDENTIFIER> = scf
+58       : "=" = =
+58       : <FLOAT_LITERAL> = 0.12e-3f
+58       : ";" = ;
+59       : "double" = double
+59       : <IDENTIFIER> = sd
+59       : "=" = =
+59       : <DOUBLE_LITERAL> = 0.12e+3
+59       : ";" = ;
+61       : "double" = double
+61       : <IDENTIFIER> = td
+61       : "=" = =
+61       : <DOUBLE_LITERAL> = 123e-5d
+61       : ";" = ;
+62       : "float" = float
+62       : <IDENTIFIER> = uf
+62       : "=" = =
+62       : <FLOAT_LITERAL> = 234e3f
+62       : ";" = ;
+63       : "double" = double
+63       : <IDENTIFIER> = ud
+63       : "=" = =
+63       : <DOUBLE_LITERAL> = 123e+5
+63       : ";" = ;
+67       : "float" = float
+67       : <IDENTIFIER> = wf
+67       : "=" = =
+67       : <FLOAT_LITERAL> = 0x456p2F
+67       : ";" = ;
+68       : "float" = float
+68       : <IDENTIFIER> = vd
+68       : "=" = =
+68       : <FLOAT_LITERAL> = 0x789p-3
+68       : ";" = ;
+70       : "float" = float
+70       : <IDENTIFIER> = wf
+70       : "=" = =
+70       : <FLOAT_LITERAL> = 0x45.6p2F
+70       : ";" = ;
+71       : "float" = float
+71       : <IDENTIFIER> = vd
+71       : "=" = =
+71       : <FLOAT_LITERAL> = 0x78.9p-3
+71       : ";" = ;
+73       : "double" = double
+73       : <IDENTIFIER> = ud
+73       : "=" = =
+73       : <DOUBLE_LITERAL> = 314e2
+73       : ";" = ;
+74       : "double" = double
+74       : <IDENTIFIER> = vd
+74       : "=" = =
+74       : <DOUBLE_LITERAL> = 567D
+74       : ";" = ;
+75       : "}" = }
+76       : "}" = }
+76       : <EOF> =
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+Note, however, that the parser test still does not work:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\Literals.java
+tests\fail\Literals.java:11: "double" found where one of
+    "boolean"...
+    "char"...
+    "false"...
+    "if"...
+    "int"...
+    "new"...
+    "null"...
+    "return"...
+    "super"...
+    "this"...
+    "true"...
+    "while"...
+    "for"...
+    "++"...
+    "!"...
+    "-"...
+    "("...
+    "{"...
+    "}"...
+    ";"...
+    <IDENTIFIER>...
+    <INT_LITERAL>...
+    <CHAR_LITERAL>...
+    <STRING_LITERAL>... sought
+tests\fail\Literals.java:13: "double" found where one of
+    "abstract"...
+    "boolean"...
+    "char"...
+    "int"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"...
+    "void"...
+    "}"...
+    <IDENTIFIER>... sought
+tests\fail\Literals.java:14: "float" found where one of
+    <EOF>...
+    "abstract"...
+    "class"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"... sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\Literals.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="6" name="Literals" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="9" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="9" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="9">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="10" name="ai" type="int">
+                  <Initializer>
+                    <JLiteralInt line="11" type="" value="5"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+First double will need to be added to type:
+
+    //ADDED
+    public final static Type DOUBLE = typeFor(double.class);
+
+Then a new JLiteralDouble class will have to be added.  It can be modeled off
+of JLiteralInt:
+
+// Modification of JLiteralInt by Bob Wilson
+
+package jminusminus;
+
+import static jminusminus.CLConstants.*;
+
+/**
+ * The AST node for an int literal.
+ */
+
+class JLiteralDouble extends JExpression {
+
+    /** String representation of the int. */
+    private String text;
+
+    /**
+     * Construct an AST node for an int literal given its line number and string
+     * representation.
+     * 
+     * @param line
+     *            line in which the literal occurs in the source file.
+     * @param text
+     *            string representation of the literal.
+     */
+
+    public JLiteralDouble(int line, String text) {
+        super(line);
+        this.text = text;
+    }
+
+    /**
+     * Analyzing an int literal is trivial.
+     * 
+     * @param context
+     *            context in which names are resolved (ignored here).
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JExpression analyze(Context context) {
+//        type = Type.DOUBLE;
+        return this;
+    }
+
+    /**
+     * Generating code for an int literal means generating code to push it onto
+     * the stack.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+//        int i = Integer.parseInt(text);
+//        switch (i) {
+//        case 0:
+//            output.addNoArgInstruction(ICONST_0);
+//            break;
+//        case 1:
+//            output.addNoArgInstruction(ICONST_1);
+//            break;
+//        case 2:
+//            output.addNoArgInstruction(ICONST_2);
+//            break;
+//        case 3:
+//            output.addNoArgInstruction(ICONST_3);
+//            break;
+//        case 4:
+//            output.addNoArgInstruction(ICONST_4);
+//            break;
+//        case 5:
+//            output.addNoArgInstruction(ICONST_5);
+//            break;
+//        default:
+//            if (i >= 6 && i <= 127) {
+//                output.addOneArgInstruction(BIPUSH, i);
+//            } else if (i >= 128 && i <= 32767) {
+//                output.addOneArgInstruction(SIPUSH, i);
+//            } else {
+//                output.addLDCInstruction(i);
+//            }
+//        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+
+    public void writeToStdOut(PrettyPrinter p) {
+        p.printf("<JLiteralDouble line=\"%d\" type=\"%s\" " + "value=\"%s\"/>\n",
+                line(), ((type == null) ? "" : type.toString()), text);
+    }
+
+}
+
+
+Next, a change will need to be made here:
+
+private JExpression literal(): {
+    JExpression expr = null;
+}
+{       
+    try {
+        <INT_LITERAL> 
+        { expr = new JLiteralInt( token.beginLine, token.image ); } |
+        <DOUBLE_LITERAL> 
+        { expr = new JLiteralDouble( token.beginLine, token.image ); } | 
+
+Next,
+
+private Type basicType(): {
+    Type type = Type.ANY;
+}
+{
+    try {
+        <BOOLEAN> { type = Type.BOOLEAN; } |
+        <CHAR> { type = Type.CHAR; } |
+        <INT> { type = Type.INT; }  |
+        <DOUBLE> { type = Type.DOUBLE; }
+
+And finally the same process needs to be applied for float.
+
+
+Line 10 and 11 was changed Line 51 of Literals.java is removed:
+
+		int ai = 
+				5;
+		double 
+		a = 5.0;//1
+
+		//float qf = 000x25f;//(interprets int, then hex)
+
+And the following test results can be observed:
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/Literals.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="6" name="Literals" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="9" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="9" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="9">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="10" name="ai" type="int">
+                  <Initializer>
+                    <JLiteralInt line="11" type="" value="5"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="13" name="a" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="13" type="" value="5.0"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="14" name="b" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="14" type="" value=".124598"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="15" name="bf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="15" type="" value=".12837f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="17" name="d" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="17" type="" value="3.14e-6"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="18" name="e" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="18" type="" value="3.14f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="19" name="f" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="19" type="" value="3.14F"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="20" name="g" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="20" type="" value="3.14d"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="21" name="h" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="21" type="" value="3.14D"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="22" name="i" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="22" type="" value="3.14e-6f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="23" name="j" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="23" type="" value="3.14e+653d"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="24" name="k" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="24" type="" value="3.14e-628"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="46" name="lf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="46" type="" value="27f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="48" name="nf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="48" type="" value="05F"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="49" name="of" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="49" type="" value="0000408f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="50" name="pf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="50" type="" value="0x25F"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="52" name="rf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="52" type="" value="0x0Ab3ff"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="57" name="mf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="57" type="" value="0f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="59" name="tf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="59" type="" value="0xc5.1D3f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="60" name="scf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="60" type="" value="0.12e-3f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="61" name="sd" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="61" type="" value="0.12e+3"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="63" name="td" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="63" type="" value="123e-5d"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="64" name="uf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="64" type="" value="234e3f"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="65" name="ud" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="65" type="" value="123e+5"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="69" name="wf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="69" type="" value="0x456p2F"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="70" name="vd" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="70" type="" value="0x789p-3"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="72" name="wf" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="72" type="" value="0x45.6p2F"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="73" name="vd" type="double">
+                  <Initializer>
+                    <JLiteralFloat line="73" type="" value="0x78.9p-3"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="75" name="ud" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="75" type="" value="314e2"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="76" name="vd" type="double">
+                  <Initializer>
+                    <JLiteralDouble line="76" type="" value="567D"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Note that there is type double wherever there is a literal float even though
+float was written as the type name.  If you look at my modifications, you can
+see that this is not intentional.
+
+As of the writing of these notes, and after
+consulting with Professor Campbell, I don't have an exact explanation for this.
+I can only guess that the modifications made in the type class were not
+specific enough to meet the requirements, or this is something that is
+performed by java for the purposes of promotion when using mixed numerical
+types.  You can also note that I modified the handwritten parser to accept
+float but I did not modify it to accept parser.  However, the same result is
+generated.
+
+Question 2)
+
+The first thing that ought to be done is to create a test.  The test
+ForParser.java can be recycled:
+
+
+package fail;
+
+import java.util.ArrayList;
+
+public class ForParser {
+	public static void main(String[] args){
+		for (;;) {
+			for (int i = 0; 3 > i; i++) {
+			    System.out.println("foo");
+			}
+		}
+		int j;
+		for (j = 0; 3 > j; j++) {
+		    System.out.println("foo");
+		}
+		//ArrayList<String> sna = new ArrayList<String>();
+		for(String buh: sna) {
+			System.out.println("foo");
+		}
+		
+		for(final String buh: sna) {
+			System.out.println("foo");
+		}
+	}
+}
+
+Running a test with the body of main commented out shows that the section of
+j--.jj will need to be updated again:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\ForParser.java
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+Exception in thread "main" java.lang.NullPointerException
+        at jminusminus.JClassDeclaration.writeToStdOut(JClassDeclaration.java:270)
+        at jminusminus.JCompilationUnit.writeToStdOut(JCompilationUnit.java:245)
+        at jminusminus.JavaCCMain.main(JavaCCMain.java:125)
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+This is added,
+
+private JClassDeclaration classDeclaration( ArrayList<String> mods ): {
+    int line = 0;
+    String name = "";
+    Type superClass = Type.OBJECT;
+    ArrayList<JMember> classBody = null;
+    ArrayList<jminusminus.Type> interfaces = new ArrayList<jminusminus.Type>();//null;//ADDED
+}
+
+But now a new problem crops up,
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\ForParser.java
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="5" name="ForParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="6" name="main" returnType="void">
+Exception in thread "main" java.lang.NullPointerException
+        at jminusminus.JMethodDeclaration.writeToStdOut(JMethodDeclaration.java:228)
+        at jminusminus.JClassDeclaration.writeToStdOut(JClassDeclaration.java:297)
+        at jminusminus.JCompilationUnit.writeToStdOut(JCompilationUnit.java:245)
+        at jminusminus.JavaCCMain.main(JavaCCMain.java:125)
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+It is dealt with as follows:
+
+private JMember memberDecl( ArrayList<String>  mods ): {
+    int line = 0;
+    Type type = null;
+    String name = "";
+    ArrayList<JFormalParameter> params = null;
+    JBlock body = null;
+    ArrayList<JVariableDeclarator> variableDeclarators = null;
+    JMember memberDecl = null;
+    ArrayList<jminusminus.Type> excepts = new ArrayList<jminusminus.Type>();//null;//ADDED
+}
+
+Now the commented out code works:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\ForParser.java
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="5" name="ForParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="6" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="6" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="6">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+In order to build the rest of the for loop first a helper method will need to
+be added to deal with multiple variables are used It is modeled off of
+variableDeclarators:
+
+    private ArrayList<JStatement> 
+    	forInit(): {
+    	ArrayList<JStatement> jse = new ArrayList<JStatement>();
+    	JStatement ini = null;
+    	}
+    	{
+    	try {
+    		ini = statementExpression()
+		   	{ jse.add(ini); }
+		   	( 	
+		   		<COMMA> ini = statementExpression()
+		    	{ jse.add(ini); }
+		    )*
+		}
+		catch ( ParseException e ) { 
+        	recoverFromError( new int[] { SEMI, EOF }, e ); 
+    	}
+    	{ return jse; }
+    }
+
+The statement method neeeds to be modified so that it support for,
+
+        <FOR> { line = token.beginLine; }
+        try {
+	    	<LPAREN> 
+	    	try {
+	    		LOOKAHEAD([<FINAL>] <COLON>)
+	    		[<FINAL>] |
+		    	try {
+		    		LOOKAHEAD(<SEMI>)
+		    		<SEMI> |
+		    		LOOKAHEAD((<IDENTIFIER> | <BOOLEAN> | <CHAR> | <INT>) <IDENTIFIER>)
+		    		a = type()//note that long is not supported
+		    		fi = variableDeclarators(a) 
+		    		<SEMI> |
+		    		LOOKAHEAD(statementExpression())
+		    		fiS = forInit()
+		    		//fiSt = statementExpression()
+		    		<SEMI>
+		    		//{ fiSt.writeToStdOut(p); }//test
+		    		//{ if (fiSt != null) {
+		    			 //fiS = new ArrayList<JStatement>();
+		    		//	 fiS.add(fiSt);
+		    		//  }
+		    		//} //|
+		    		//LOOKAHEAD(statementExpression() <COMMA>)
+		    		//fiS = forInit()
+		    		}
+		    		catch ( ParseException e ) { 
+	        			recoverFromError( new int[] { SEMI, EOF }, e ); 
+	    			}
+	    		 try {
+	    		 	LOOKAHEAD(expression())
+	    		 	t = expression()
+	    		 	<SEMI> |
+	    		 	<SEMI>
+	    		 	}
+	    		 	catch ( ParseException e ) { 
+	        			recoverFromError( new int[] { SEMI, EOF }, e ); 
+	    			}	
+		    	//<SEMI>
+		    	try {
+		    		LOOKAHEAD(<RPAREN>) 
+		    		<RPAREN> |
+		    		LOOKAHEAD(statementExpression())
+		    		fu = forInit()
+		    		<RPAREN>
+		    		//{ fiSt.writeToStdOut(p); }
+		    		//{ if (fut != null) {
+		    		//	 fu = new ArrayList<JStatement>();
+		    		//	 fu.add(fut);
+		    		//  }
+		    		//<SEMI>
+		    		//}
+		    		//while (have(COMMA)){
+		    		//}
+		    		//( LOOKAHEAD(<COMMA>)
+		    		//	<COMMA>
+		    		//	t = statementExpression()
+		    		//	{ if (t != null) {
+		    		//	 	fiS.add(statementExpression());
+		    		//  	}
+		    		//	})*
+		    		//<SEMI>
+		    		}
+		    		catch ( ParseException e ) { 
+	        			recoverFromError( new int[] { SEMI, EOF }, e ); 
+	    			}
+	    	}
+	    	catch ( ParseException e ) { 
+	        	recoverFromError( new int[] { SEMI, EOF }, e ); 
+	    	}
+	    }
+	    catch ( ParseException e ) { 
+        	recoverFromError( new int[] { SEMI, EOF }, e ); 
+    	}
+	    st = statement()
+	    { statement =
+	    	new JForStatement( line, fi, fiS, t, fu, st); } |
+
+
+The tests showing the efficacy of the programs are as follows:
+
+public class ForParser {
+	public static void main(String[] args){
+		int i, j, k;
+		for (i = 0 , j = 0, k = 0; 1 > i; i--, j--, k--) {
+			for (int i = 0; 3 > i; i--) {
+			    System.out.println("foo");
+			}
+		}
+//		for (j = 0; 3 > j; j++) {
+//		    System.out.println("foo");
+//		}
+//		//ArrayList<String> sna = new ArrayList<String>();
+//		for(String buh: sna) {
+//			System.out.println("foo");
+//		}
+//		for (j = 0;        //<<<<<LINE 21 ******************
+//				;) {
+//		
+//		}
+//		for (i = 0, j = 0;;i++, j++) {
+//			
+//		}
+//		
+//		for(final String buh: sna) {
+//			System.out.println("foo");
+//		}
+	}
+}hk
+
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\ForParser.java
+tests\fail\ForParser.java:32: "hk" found where one of
+    <EOF>...
+    "abstract"...
+    "class"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"... sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="5" name="ForParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="6" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="6" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="6">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="7" name="i" type="int">
+                </JVariableDeclarator>
+                <JVariableDeclarator line="7" name="j" type="int">
+                </JVariableDeclarator>
+                <JVariableDeclarator line="7" name="k" type="int">
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JForStatement line="8">
+              <InitialValue>
+                <JStatementExpression line="8">
+                  <JBinaryExpression line="8" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="i"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="8" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JBinaryExpression line="8" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="j"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="8" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JBinaryExpression line="8" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="k"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="8" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="8" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="8" type="" value="1"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="i"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="8">
+                  <JUnaryExpression line="8" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JUnaryExpression line="8" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="j"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JUnaryExpression line="8" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="k"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="8">
+                <JForStatement line="9">
+                  <InitialValue>
+                    <JVariableDeclarator line="9" name="i" type="int">
+                      <Initializer>
+                        <JLiteralInt line="9" type="" value="0"/>
+                      </Initializer>
+                    </JVariableDeclarator>
+                  </InitialValue>
+                  <Test>
+                    <JBinaryExpression line="9" type="" operator="&gt;">
+                      <Lhs>
+                        <JLiteralInt line="9" type="" value="3"/>
+                      </Lhs>
+                      <Rhs>
+                        <JVariable name="i"/>
+                      </Rhs>
+                    </JBinaryExpression>
+                  </Test>
+                  <Update>
+                    <JStatementExpression line="9">
+                      <JUnaryExpression line="9" type="" operator="post--">
+                        <Operand>
+                          <JVariable name="i"/>
+                        </Operand>
+                      </JUnaryExpression>
+                    </JStatementExpression>
+                  </Update>
+                <Express>
+                  <JBlock line="9">
+                    <JStatementExpression line="10">
+                      <JMessageExpression line="10" name="println">
+                        <Arguments>
+                          <Argument>
+                            <JLiteralString line="10" type="" value="&quot;foo&quot;"/>
+                          </Argument>
+                        </Arguments>
+                      </JMessageExpression>
+                    </JStatementExpression>
+                  </JBlock>
+                </express>
+                </JForStatement>
+              </JBlock>
+            </express>
+            </JForStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+Once this has been performed creating the enhanced for loop is a matter of
+using lookahead to test for the syntactic requirements of a for loop with and
+without the optional "final"
+
+        <FOR> { line = token.beginLine; }
+	    	<LPAREN> 
+	    	try { // doesn't currently deal with final
+	    		LOOKAHEAD( (<IDENTIFIER> | <BOOLEAN> | <CHAR> | <INT>) <IDENTIFIER> <COLON>)
+	    		ty = type()
+	    		s = qualifiedIdentifier()
+	    		<COLON>
+        		r = qualifiedIdentifier()
+        		<RPAREN>
+        		state = statement()
+        		{ return new JEnhancedForStatement(line, ty, s, r, state, fin); } |
+        		LOOKAHEAD( <FINAL> (<IDENTIFIER> | <BOOLEAN> | <CHAR> | <INT>) <IDENTIFIER> <COLON>)
+        		<FINAL>
+	    		ty = type()
+	    		s = qualifiedIdentifier()
+	    		<COLON>
+        		r = qualifiedIdentifier()
+        		<RPAREN>
+        		state = statement()
+        		{ fin = "final"; }
+        		{ return new JEnhancedForStatement(line, ty, s, r, state, fin); } |
+		    	try {
+		    		LOOKAHEAD(<SEMI>)
+		    		<SEMI> |
+		    		LOOKAHEAD((<IDENTIFIER> | <BOOLEAN> | <CHAR> | <INT>) <IDENTIFIER>)
+
+Note that the remainder of the code is described above.  The tests are as
+follows:
+
+package fail;
+
+import java.util.ArrayList;
+
+public class ForParser {
+	public static void main(String[] args){
+		int i, j, k;
+		for (i = 0 , j = 0, k = 0; 1 > i; i--, j--, k--) {
+			for (int i = 0; 3 > i; i--) {
+			    System.out.println("foo");
+			}
+		}
+		while (true ) {
+			
+			
+		}
+		for (; ; ) {
+		    System.out.println("foo");
+		}
+//		//ArrayList<String> sna = new ArrayList<String>();
+		for(String buh: sna) {
+			System.out.println("foo");
+		}
+//		for (j = 0;        //<<<<<LINE 21 ******************
+//				;) {
+//		
+//		}
+		for (i = 0, j = 0;;i--, j--) {
+			
+		}
+//		
+		for(final String buh: sna) {
+			System.out.println("foo");
+		}
+	}
+}hk
+
+tests/fail/ForParser.java:36: "hk" found where one of 
+    <EOF>...
+    "abstract"...
+    "class"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"... sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="5" name="ForParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="6" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="6" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="6">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="7" name="i" type="int">
+                </JVariableDeclarator>
+                <JVariableDeclarator line="7" name="j" type="int">
+                </JVariableDeclarator>
+                <JVariableDeclarator line="7" name="k" type="int">
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JForStatement line="8">
+              <InitialValue>
+                <JStatementExpression line="8">
+                  <JBinaryExpression line="8" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="i"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="8" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JBinaryExpression line="8" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="j"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="8" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JBinaryExpression line="8" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="k"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="8" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="8" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="8" type="" value="1"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="i"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="8">
+                  <JUnaryExpression line="8" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JUnaryExpression line="8" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="j"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="8">
+                  <JUnaryExpression line="8" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="k"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="8">
+                <JForStatement line="9">
+                  <InitialValue>
+                    <JVariableDeclarator line="9" name="i" type="int">
+                      <Initializer>
+                        <JLiteralInt line="9" type="" value="0"/>
+                      </Initializer>
+                    </JVariableDeclarator>
+                  </InitialValue>
+                  <Test>
+                    <JBinaryExpression line="9" type="" operator="&gt;">
+                      <Lhs>
+                        <JLiteralInt line="9" type="" value="3"/>
+                      </Lhs>
+                      <Rhs>
+                        <JVariable name="i"/>
+                      </Rhs>
+                    </JBinaryExpression>
+                  </Test>
+                  <Update>
+                    <JStatementExpression line="9">
+                      <JUnaryExpression line="9" type="" operator="post--">
+                        <Operand>
+                          <JVariable name="i"/>
+                        </Operand>
+                      </JUnaryExpression>
+                    </JStatementExpression>
+                  </Update>
+                <Express>
+                  <JBlock line="9">
+                    <JStatementExpression line="10">
+                      <JMessageExpression line="10" name="println">
+                        <Arguments>
+                          <Argument>
+                            <JLiteralString line="10" type="" value="&quot;foo&quot;"/>
+                          </Argument>
+                        </Arguments>
+                      </JMessageExpression>
+                    </JStatementExpression>
+                  </JBlock>
+                </express>
+                </JForStatement>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JWhileStatement line="13">
+              <TestExpression>
+                <JLiteralTrue line="13" type=""/>
+              </TestExpression>
+              <Body>
+                <JBlock line="13">
+                </JBlock>
+              </Body>
+            </JWhileStatement>
+            <JForStatement line="17">
+              <InitialValue>
+              </InitialValue>
+              <Test>
+              </Test>
+              <Update>
+              </Update>
+            <Express>
+              <JBlock line="17">
+                <JStatementExpression line="18">
+                  <JMessageExpression line="18" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="18" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JEnhancedForStatement line="21">
+              <Type>
+                String
+              </Type>
+              <Identifier>
+                buh
+              </Identifier>
+              <Iterator>
+                sna
+              </Iterator>
+            <Express>
+              <JBlock line="21">
+                <JStatementExpression line="22">
+                  <JMessageExpression line="22" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="22" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JEnhancedForStatement>
+            <JForStatement line="28">
+              <InitialValue>
+                <JStatementExpression line="28">
+                  <JBinaryExpression line="28" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="i"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="28" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="28">
+                  <JBinaryExpression line="28" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="j"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="28" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+              </InitialValue>
+              <Test>
+              </Test>
+              <Update>
+                <JStatementExpression line="28">
+                  <JUnaryExpression line="28" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+                <JStatementExpression line="28">
+                  <JUnaryExpression line="28" type="" operator="post--">
+                    <Operand>
+                      <JVariable name="j"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="28">
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JEnhancedForStatement line="32">
+              final
+              <Type>
+                String
+              </Type>
+              <Identifier>
+                buh
+              </Identifier>
+              <Iterator>
+                sna
+              </Iterator>
+            <Express>
+              <JBlock line="32">
+                <JStatementExpression line="33">
+                  <JMessageExpression line="33" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="33" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JEnhancedForStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+Question 3)
+
+First, interface will need to be added to the reserved words list.  The tests
+can be InterfaceParser, InterfaceWithMulExts, and ClassWithMulInterfs from
+homework 3.
+
+Next "final" needs to be added to modifiers():
+
+private ArrayList<String> modifiers(): {
+    ArrayList<String> mods = new ArrayList<String>();
+    boolean scannedPUBLIC = false;
+    boolean scannedPROTECTED = false;
+    boolean scannedPRIVATE = false;
+    boolean scannedSTATIC = false;
+    boolean scannedABSTRACT = false;
+    boolean scannedFINAL = false;
+}
+{
+    try {
+    (   
+        <PUBLIC> 
+        { 
+            mods.add( "public" );
+            if ( scannedPUBLIC ) {
+                reportParserError( "Repeated modifier: public" );
+            }
+            if ( scannedPROTECTED || scannedPRIVATE ) {
+                reportParserError( "Access conflict in modifiers" );
+            }
+            scannedPUBLIC = true;
+        } |
+        <PROTECTED> 
+        { 
+            mods.add( "protected" );
+            if ( scannedPROTECTED ) {
+                reportParserError( "Repeated modifier: protected" );
+            }
+            if ( scannedPUBLIC || scannedPRIVATE ) {
+                reportParserError( "Access conflict in modifiers" );
+            }
+            scannedPROTECTED = true;
+        } |
+        <PRIVATE> 
+        { 
+            mods.add( "private" );
+            if ( scannedPRIVATE ) {
+                reportParserError( "Repeated modifier: private" );
+            }
+            if ( scannedPUBLIC || scannedPROTECTED ) {
+                reportParserError( "Access conflict in modifiers" );
+            }
+            scannedPRIVATE = true;
+        } |
+        <STATIC> 
+        { 
+            mods.add( "static" );
+            if ( scannedSTATIC ) {
+                reportParserError( "Repeated modifier: static" );
+            }
+            scannedSTATIC = true;
+        } |
+        <ABSTRACT> 
+        { 
+            mods.add( "abstract" );
+            if ( scannedABSTRACT ) {
+                reportParserError( "Repeated modifier: abstract" );
+            }
+            scannedABSTRACT = true;
+        } |
+        <FINAL>
+        {
+        	mods.add( "final" );
+        	if ( scannedFINAL ) {
+        		reportParserError( "Repeated modifier: final" );
+        	}
+        	scannedFINAL = true;
+        }
+    )*                  
+    } 
+    catch ( ParseException e ) { 
+        recoverFromError( new int[] { SEMI, EOF }, e ); 
+    }
+    { return mods; }
+}
+
+Once this is done, it is necessary to add a support method that will interpret
+multiple interfaces or extensions:
+
+    private ArrayList<jminusminus.Type> 
+    	multExtsOrImps(): {
+    	jminusminus.Type superClass = null;
+        ArrayList<jminusminus.Type> supers = new ArrayList<Type>();
+    	}
+    	{
+    	try {
+    		superClass = qualifiedIdentifier()
+		   	{ supers.add(superClass); }
+		   	( 	
+		   		<COMMA> superClass = qualifiedIdentifier()
+		    	{ supers.add(superClass); }
+		    )*
+		}
+		catch ( ParseException e ) { 
+        	recoverFromError( new int[] { SEMI, EOF }, e ); 
+    	}
+    	{ return supers; }
+    }
+
+Then interfaceDeclaration needs to be created:
+
+private JInterfaceDeclaration interfaceDeclaration( ArrayList<String> mods ): {
+    int line = 0;
+    String name = "";
+    Type superClass = null;
+    ArrayList<jminusminus.Type> supers = new ArrayList<Type>();
+    ArrayList<JMember> interfaceBody = null;
+    ArrayList<jminusminus.Type> interfaces = new ArrayList<jminusminus.Type>();//null;//ADDED
+}
+{
+    try {
+        <INTERFACE> { line = token.beginLine; }
+        <IDENTIFIER> { name = token.image; }
+        [ 
+            <EXTENDS> 
+			supers = multExtsOrImps()
+        ]
+        interfaceBody = classBody()//This will need to be changed           
+    } 
+    catch ( ParseException e ) { 
+        recoverFromError( new int[] { SEMI, EOF }, e ); 
+    }
+    { //interfaces ADDED
+        return new JInterfaceDeclaration(line, mods, name, supers, interfaceBody);
+    }
+}
+
+Then classDeclartion needs to be modified so it handles implements:
+
+private JClassDeclaration classDeclaration( ArrayList<String> mods ): {
+    int line = 0;
+    String name = "";
+    Type superClass = Type.OBJECT;
+    ArrayList<JMember> classBody = null;
+    ArrayList<jminusminus.Type> interfaces = new ArrayList<jminusminus.Type>();//null;//ADDED
+}
+{
+    try {
+        <CLASS> { line = token.beginLine; }
+        <IDENTIFIER> { name = token.image; }
+        [ 
+            <EXTENDS> superClass = qualifiedIdentifier() 
+        ]
+       [ 
+            <IMPLEMENTS> 
+            interfaces = multExtsOrImps()
+       ]
+        classBody = classBody()           
+    } 
+    catch ( ParseException e ) { 
+        recoverFromError( new int[] { SEMI, EOF }, e ); 
+    }
+    { //interfaces ADDED
+        return new JClassDeclaration( line, mods, 
+            name, superClass, classBody, interfaces ); 
+    }
+}
+
+Finally typeDeclaraion needs to be modified so that it handles
+interfaceDeclaration:
+
+private JAST typeDeclaration(): {
+    ArrayList<String> mods = null;
+    JAST classDeclaration = null;
+    JAST interfaceDeclaration = null;//added
+}
+{
+    try {
+        mods = modifiers()
+        
+       	try {
+       	LOOKAHEAD(<INTERFACE>)
+       	interfaceDeclaration = interfaceDeclaration(mods)
+       	{ return interfaceDeclaration; } |
+        LOOKAHEAD(<CLASS>)
+        classDeclaration = classDeclaration( mods ) 
+        }
+       	catch ( ParseException e ) { 
+        	recoverFromError( new int[] { SEMI, EOF }, e ); 
+    	}
+    } 
+    catch ( ParseException e ) { 
+        recoverFromError( new int[] { SEMI, EOF }, e ); 
+    }
+    { return classDeclaration; }
+}
+
+Here are the three tests along with the results:
+
+package fail;
+
+public class ClassWithMulInterfs implements ga, sna, buh{
+	int i = 0;
+	
+	public void foo();
+	
+}jdfljadl//keep compiler happy
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\ClassWithMulInterfs.java
+tests\fail\ClassWithMulInterfs.java:8: "jdfljadl" found where one of
+    <EOF>...
+    "abstract"...
+    "class"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"...
+    "final"...
+    "interface"... sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\ClassWithMulInterfs.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="ClassWithMulInterfs" super="java.lang.Object" implements="    ga    sna    buh     ">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JFieldDeclaration line="4"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="4" name="i" type="int">
+            <Initializer>
+              <JLiteralInt line="4" type="" value="0"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JMethodDeclaration line="6" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+package fail;
+
+public interface InterfaceWithMulExts extends ga , sna, buh{
+	public void foo();
+	
+}jdfljadl//keep compiler happy
+
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\InterfaceWithMulExts.java
+tests\fail\InterfaceWithMulExts.java:6: "jdfljadl" found where one of
+    <EOF>...
+    "abstract"...
+    "class"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"...
+    "final"...
+    "interface"... sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\InterfaceWithMulExts.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="3" name="InterfaceWithMulExts" super="    ga    sna    buh     ">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+package fail;
+
+public interface InterfaceParser {
+	
+	final int i = 0;
+	
+	public void foo();
+	
+	
+	
+}jdfljadl//keep compiler happy
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\javaccj-- -p tests\fail\InterfaceParser.java
+tests\fail\InterfaceParser.java:11: "jdfljadl" found where one of
+    <EOF>...
+    "abstract"...
+    "class"...
+    "private"...
+    "protected"...
+    "public"...
+    "static"...
+    "final"...
+    "interface"... sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests\fail\InterfaceParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="3" name="InterfaceParser" super="null">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JFieldDeclaration line="5"/>
+        <Modifiers>
+          <Modifier name="final"/>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="5" name="i" type="int">
+            <Initializer>
+              <JLiteralInt line="5" type="" value="0"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JMethodDeclaration line="7" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+Everything was then built and tested on users.cs.umb.edu, and that's it.
+
+

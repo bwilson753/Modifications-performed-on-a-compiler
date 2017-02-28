@@ -1,0 +1,1854 @@
+Robert Wilson
+HW2 Narrative
+CS451
+
+1) MULTILINE COMMENTS
+
+In scanner, the code related to ignoring single line comments is
+
+if (ch == '/') {
+                nextCh();
+                if (ch == '/') {
+                    // CharReader maps all new lines to '\n'
+                    while (ch != '\n' && ch != EOFCH) {
+                        nextCh();
+                    }
+                } else {
+                    //reportScannerError("Operator / is not supported in j--.");
+                	return new TokenInfo(DIV, line);
+                }
+
+So it seems reasonable that modifying this section of code could allow the
+compiler to ignore multi-line comments.
+
+However, first some tests should be built.  The tests should initially test for
+single line comments and then modified so that they test for multi-line
+comments.  One test could be placed in pass and another in fail.  Placing a
+test in junit is unnecessary.  The test is nothing more than a main method
+with some comments in it.
+
+package pass;
+
+public class MultiComments {
+	
+	public static void main (String[] args) {
+		/*this just tests for comments and does nothing else
+		 * 
+		 */
+		
+	}
+}
+
+When the comments were set as single line the test passed without any problem.
+However, it failed when it was converted to multi-line and yielded the
+following results.
+
+
+ [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\multicomments.java:6: Literal sought where / found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\multicomments.java:6: Literal sought where * found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\multicomments.java:6: Invalid statement expression; it does not have a side-effect
+
+So the following code was added to the above if else statements,
+
+//the following code has been added to deal with
+                //mutltiline comments
+                else if (ch == '*') {
+                	boolean foundEnd = false;
+                	while (ch != EOFCH && !foundEnd) {
+                		while (ch != '*' && ch != EOFCH) {	
+                				nextCh();
+                		}
+                		if (ch == '*'){
+                			nextCh();
+                			if (ch == '/'){
+                				nextCh();//it is not white space
+                				foundEnd = true;
+                			}
+                		}
+                	}
+                }
+
+Using the -t option on MultiComments.java above returns the following,
+1	 : package = package
+1	 : <IDENTIFIER> = pass
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = MultiComments
+3	 : { = {
+5	 : public = public
+5	 : static = static
+5	 : void = void
+5	 : <IDENTIFIER> = main
+5	 : ( = (
+5	 : <IDENTIFIER> = String
+5	 : [ = [
+5	 : ] = ]
+5	 : <IDENTIFIER> = args
+5	 : ) = )
+5	 : { = {
+10	 : } = }
+11	 : } = }
+11	 : <EOF> = <EOF>
+
+This caused the above test to pass.  Another test was added to make sure
+multiline comments failed when they were not closed.  This test was also
+successful.  
+
+2) ALL JAVA OPERATORS
+
+2) ALL JAVA OPERATORS
+
+According to the textbook, all of the Java operators are as follows:
+Operators
+The following tokens serve as operators in Java:
+? = == ! ~ != / /= + += ++ -
+-= -- * *= % %= >> >>= >>> >>>= >= >
+<< <<= <= < ^ ^= | |= || & &= &&
+
+An important point to note here is that adding any of these that are missing
+from the Scanner will not affect it overall ability to use the operator, it
+will only affect its ability to be interpreted during lexical analysis.
+Therefore, the only test should be a fail test, and close attention should be
+paid to the results of the fail test before the operators are added to the
+scanner and after the operators are added to the scanner.
+
+Currently, Scanner supports the interpretation of the following tokens,
+
+= == + += ++ - -- ! * % && > <= /
+
+Note that the following operators are read by Scanner but a Scanner error is
+thrown,
+
+& <
+
+Test
+
+package fail;
+
+public class Operators {
+	& <
+}
+
+Run with -t option
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = Operators
+3	 : { = {
+4	 : & = &
+tests/fail/Operators.java:4: Operator < is not supported in j--.
+5	 : } = }
+5	 : <EOF> = <EOF>
+
+Note that since the bonus was performed on homework 1, '&' is scanned without
+an error but '>' is not.  So the first thing that needs to be done is to add
+all of the new characters to TokenInfo.java.
+
+//ADDED OPERATORS
+		/* ? ~ != /= 
+		-= *= %= >> >>= >>> >>>= >=
+		<< <<= ^= |= || &= */
+
+    	QMARK("?"), COMP("~"), NOT_ASSIGN("!="), DIV_ASSIGN("/="),
+    	MINUS_ASSIGN("-="), STAR_ASSIGN("*="), MOD_ASSIGN("%="), SRS(">>"),
+    	SRS_ASSIGN(">>="), URS(">>>"), URS_ASSIGN(">>>="), RE(">="),
+    	SLS("<<"), SLS_ASSIGN("<<="), BXOR_ASSIGN("^="), LOR("||"),
+    	AND_ASSIGN("&="), L("<"), BOR_ASSIGN("|=");
+
+Then the operator fail test can be modified so that it includes all of the
+operators,
+
+package fail;
+
+public class Operators {
+			? = == ! ~ != / /= + += ++ -
+			-= -- * *= % %= >> >>= >>> >>>= >= >
+			<< <<= <= < ^ ^= | |= || & &= &&
+}
+
+This is the result of the first -t test.  Note that it originally does not show
+errors because it breaks down many of the tokens incorrectly,
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = Operators
+3	 : { = {
+tests/fail/Operators.java:4: Unidentified input token: '?'
+4	 : = = =
+4	 : == = ==
+4	 : ! = !
+tests/fail/Operators.java:4: Unidentified input token: '~'
+4	 : ! = !
+4	 : = = =
+4	 : / = /
+4	 : / = /
+4	 : = = =
+4	 : + = +
+4	 : += = +=
+4	 : ++ = ++
+4	 : - = -
+5	 : - = -
+5	 : = = =
+5	 : -- = --
+5	 : * = *
+5	 : * = *
+5	 : = = =
+5	 : % = %
+5	 : % = %
+5	 : = = =
+5	 : > = >
+5	 : > = >
+5	 : > = >
+5	 : > = >
+5	 : = = =
+5	 : > = >
+5	 : > = >
+5	 : > = >
+5	 : > = >
+5	 : > = >
+5	 : > = >
+5	 : = = =
+5	 : > = >
+5	 : = = =
+5	 : > = >
+tests/fail/Operators.java:6: Operator < is not supported in j--.
+tests/fail/Operators.java:6: Operator < is not supported in j--.
+tests/fail/Operators.java:6: Operator < is not supported in j--.
+6	 : <= = <=
+6	 : <= = <=
+tests/fail/Operators.java:6: Operator < is not supported in j--.
+6	 : ^ = ^
+6	 : ^ = ^
+6	 : = = =
+6	 : | = |
+6	 : | = |
+6	 : = = =
+6	 : | = |
+6	 : | = |
+6	 : & = &
+6	 : & = &
+6	 : && = &&
+7	 : } = }
+7	 : <EOF> = <EOF>
+
+The remaining modifications need to be made in Scanner.  There is little to say
+about these changes other than it is the addition of boolean if and else
+statements, many of which need to be nested.  After they are performed the
+Operators class in the fail package returns the following when the -t option is
+run:
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = Operators
+3	 : { = {
+4	 : ? = ?
+4	 : = = =
+4	 : == = ==
+4	 : ! = !
+4	 : ~ = ~
+4	 : != = !=
+4	 : / = /
+4	 : /= = /=
+4	 : + = +
+4	 : += = +=
+4	 : ++ = ++
+4	 : - = -
+5	 : -= = -=
+5	 : -- = --
+5	 : * = *
+5	 : *= = *=
+5	 : % = %
+5	 : %= = %=
+5	 : >> = >>
+5	 : >>= = >>=
+5	 : >>> = >>>
+5	 : >>>= = >>>=
+5	 : >= = >=
+5	 : > = >
+6	 : << = <<
+6	 : <<= = <<=
+6	 : <= = <=
+6	 : < = <
+6	 : ^ = ^
+6	 : ^= = ^=
+6	 : | = |
+6	 : |= = |=
+6	 : || = ||
+6	 : & = &
+6	 : &= = &=
+6	 : && = &&
+7	 : } = }
+7	 : <EOF> = <EOF>
+ 
+Question 3)
+
+All of the Java keywords are as follows:
+
+abstract const finally int public this
+boolean continue float interface return throw
+break default for long short throws
+byte do goto native static transient
+case double if new strictfp try
+catch else implements package super void
+char extends import private switch volatile
+class final instanceof protected synchronized while
+
+First a new test can be added in fail called keywords that can be used to test
+the scannner.
+
+package fail;
+
+public class Keywords {
+	abstract const finally int public this
+	boolean continue float interface return throw
+	break default for long short throws
+	byte do goto native static transient
+	case double if new strictfp try
+	catch else implements package super void
+	char extends import private switch volatile
+	class final instanceof protected synchronized while
+}
+
+The original -t option runs as follows:
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = Keywords
+3	 : { = {
+4	 : abstract = abstract
+4	 : <IDENTIFIER> = const
+4	 : <IDENTIFIER> = finally
+4	 : int = int
+4	 : public = public
+4	 : this = this
+5	 : boolean = boolean
+5	 : <IDENTIFIER> = continue
+5	 : <IDENTIFIER> = float
+5	 : <IDENTIFIER> = interface
+5	 : return = return
+5	 : <IDENTIFIER> = throw
+6	 : <IDENTIFIER> = break
+6	 : <IDENTIFIER> = default
+6	 : <IDENTIFIER> = for
+6	 : <IDENTIFIER> = long
+6	 : <IDENTIFIER> = short
+6	 : <IDENTIFIER> = throws
+7	 : <IDENTIFIER> = byte
+7	 : <IDENTIFIER> = do
+7	 : <IDENTIFIER> = goto
+7	 : <IDENTIFIER> = native
+7	 : static = static
+7	 : <IDENTIFIER> = transient
+8	 : <IDENTIFIER> = case
+8	 : <IDENTIFIER> = double
+8	 : if = if
+8	 : new = new
+8	 : <IDENTIFIER> = strictfp
+8	 : <IDENTIFIER> = try
+9	 : <IDENTIFIER> = catch
+9	 : else = else
+9	 : <IDENTIFIER> = implements
+9	 : package = package
+9	 : super = super
+9	 : void = void
+10	 : char = char
+10	 : extends = extends
+10	 : import = import
+10	 : private = private
+10	 : <IDENTIFIER> = switch
+10	 : <IDENTIFIER> = volatile
+11	 : class = class
+11	 : <IDENTIFIER> = final
+11	 : instanceof = instanceof
+11	 : protected = protected
+11	 : <IDENTIFIER> = synchronized
+11	 : while = while
+12	 : } = }
+12	 : <EOF> = <EOF>
+
+Every word that is marked as an identifier needs to be added to the
+reserved Hashtable and to TokenInfo as follows:
+
+//ADDED RESERVED WORDS
+BREAK("break"), BYTE("byte"), CASE("case"), CATCH("catch"), CONST("const"), 
+CONTINUE("continue"), DEFAULT("default"), DO("do"), DOUBLE("double"), 
+FINAL("final") ,FINALLY("finally"), FLOAT("float"), FOR("for"), GOTO("goto"), 
+IMPLEMENTS("implements"), INTERFACE("interface"), LONG("long"), 
+NATIVE("native"), SHORT("short"), STRICTFP("strictfp"), SWITCH("switch"), 
+SYNCHRONIZED("synchronized"), THROW("throw"),
+THROWS("throws"), TRANSIENT("transient"), TRY("try"), VOLATILE("volatile");
+
+      //ADDED RESERVED WORDS
+        reserved.put(BREAK.image(), BREAK);
+        reserved.put(BYTE.image(), BYTE);
+        reserved.put(CASE.image(), CASE);
+        reserved.put(CATCH.image(), CATCH);
+        reserved.put(CONST.image(), CONST);
+        reserved.put(CONTINUE.image(), CONTINUE);
+        reserved.put(DEFAULT.image(), DEFAULT);
+        reserved.put(DO.image(), DO);
+        reserved.put(DOUBLE.image(), DOUBLE);
+        reserved.put(FINAL.image(), FINAL);
+        reserved.put(FINALLY.image(), FINALLY);
+        reserved.put(FLOAT.image(), FLOAT);
+        reserved.put(FOR.image(), FOR);
+        reserved.put(GOTO.image(), GOTO);
+        reserved.put(IMPLEMENTS.image(), IMPLEMENTS);
+        reserved.put(INTERFACE.image(), INTERFACE);
+        reserved.put(LONG.image(), LONG);
+        reserved.put(NATIVE.image(), NATIVE);
+        reserved.put(SHORT.image(), SHORT);
+        reserved.put(STRICTFP.image(), STRICTFP);
+        reserved.put(THROW.image(), THROW);
+        reserved.put(THROWS.image(), THROWS);
+        reserved.put(TRANSIENT.image(), TRANSIENT);
+        reserved.put(TRY.image(), TRY);
+        reserved.put(SWITCH.image(), SWITCH);
+        reserved.put(SYNCHRONIZED.image(), SYNCHRONIZED);
+        reserved.put(VOLATILE.image(), VOLATILE);
+
+Now all of the keywords can be seen as keywords and not identifiers using -t
+option as follows:
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = Keywords
+3	 : { = {
+4	 : abstract = abstract
+4	 : const = const
+4	 : finally = finally
+4	 : int = int
+4	 : public = public
+4	 : this = this
+5	 : boolean = boolean
+5	 : continue = continue
+5	 : float = float
+5	 : interface = interface
+5	 : return = return
+5	 : throw = throw
+6	 : break = break
+6	 : default = default
+6	 : for = for
+6	 : long = long
+6	 : short = short
+6	 : throws = throws
+7	 : byte = byte
+7	 : do = do
+7	 : goto = goto
+7	 : native = native
+7	 : static = static
+7	 : transient = transient
+8	 : case = case
+8	 : double = double
+8	 : if = if
+8	 : new = new
+8	 : strictfp = strictfp
+8	 : try = try
+9	 : catch = catch
+9	 : else = else
+9	 : implements = implements
+9	 : package = package
+9	 : super = super
+9	 : void = void
+10	 : char = char
+10	 : extends = extends
+10	 : import = import
+10	 : private = private
+10	 : switch = switch
+10	 : volatile = volatile
+11	 : class = class
+11	 : final = final
+11	 : instanceof = instanceof
+11	 : protected = protected
+11	 : synchronized = synchronized
+11	 : while = while
+12	 : } = }
+12	 : <EOF> = <EOF>
+
+Questions 4, 5, and 6)
+
+The following three questions require a great deal of detail to understand and
+many of the issues blend together and so it is unavoidable to consider it as a
+single subject. 
+
+The area of the code in Scanner that needs to be modified is:
+
+        case '.':
+            nextCh();
+            return new TokenInfo(DOT, line);
+        case EOFCH:
+            return new TokenInfo(EOF, line);
+        case '0':
+            // Handle only simple decimal integers for now.
+            nextCh();
+            return new TokenInfo(INT_LITERAL, "0", line);
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            buffer = new StringBuffer();
+            while (isDigit(ch)) {
+                buffer.append(ch);
+                nextCh();
+            }
+            return new TokenInfo(INT_LITERAL, buffer.toString(), line);
+
+Floating point literals are described in,
+
+http://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html
+
+as follows,
+
+"Floating-Point Literals
+
+A floating-point literal is of type float if it ends with the letter F or f; 
+otherwise its type is double and it can optionally end with the letter D or d.
+
+The floating point types (float and double) can also be expressed using E or e 
+(for scientific notation), F or f (32-bit float literal) and D or d 
+(64-bit double literal; this is the default and by convention is omitted).
+
+So a float literal always ends with f or F, but a double either ends with d or
+D or ends with nothing but has a decimal.
+
+Consider the following:
+
+double d1 = 123.4;
+// same value as d1, but in scientific notation
+double d2 = 1.234e2;
+float f1  = 123.4f;"
+
+It is good to recognize this because because when modifying the above code, it
+is important to recognize that the key to reading the difference between
+double and float is recognizing that a float will always be marked with an f
+but if there is a decimal point but no f then it is a double regardless of
+whether or not there is an optional d.
+
+For example, suppose you attempted to run,
+
+		float a = .0;
+		System.out.println(a);
+
+The following error is returned,
+
+Exception in thread "main" java.lang.Error: Unresolved compilation problem: 
+	Type mismatch: cannot convert from double to float
+
+	at test.t.main(t.java:10)
+
+In addition to recognizing the above, it is also important to recognize that
+both floats and doubles have an optional exponent modifier that has optional
+unary plus and minus operators.
+
+Note that, as can be seen from the above test, doubles and floats can start
+with a decimal.  Therefore, the following case must also be modified,
+
+case '.':
+            nextCh();
+            return new TokenInfo(DOT, line);
+
+Also note the following error with regard to exponent modifications,
+
+		double a = .e3;
+		System.out.println(a);
+
+Exception in thread "main" java.lang.Error: Unresolved compilation problems: 
+	Syntax error on token ".", delete this token
+	e3 cannot be resolved to a variable
+
+	at test.t.main(t.java:10)
+
+The e modifier can not immediately follow an exponent.  However, it does not
+need to follow a decimal,
+
+		double a = 4e3;
+		System.out.println(a);
+
+4000.0
+
+This shows that either the presence of a decimal point or an e automatically
+converts a number to a double.
+
+Also, it can be assumed that a decimal point will not be added if an e has
+been found,
+
+		double a = 4e3.02;
+		System.out.println(a);
+
+Exception in thread "main" java.lang.Error: Unresolved compilation problem: 
+	Syntax error on token ".02", delete this token
+
+And note that,
+
+        double a = 0.;//nothing after the trailing decimal
+        System.out.println(a);
+
+0.0
+
+But,
+
+        double b = .;
+
+And,
+
+	float c = 1.f;
+        float d = 1f;
+        System.out.println(c);
+        System.out.println(d);
+
+1.0
+1.0
+
+
+1 error found:
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java  [line: 3]
+Error: illegal start of expression
+
+When making the following initial modification to,
+
+case '.':
+            nextCh(); 
+            if (isDigit(ch)) {//deals with doubles starting with a decimal
+            	buffer = new StringBuffer();
+                while (isDigit(ch)) {
+                    buffer.append(ch);
+                    nextCh();
+                }//it can not report an error because nextCh() has already 
+                //been performed
+                //reportScannerError("Doubles are not supported in j--.");
+                //return getNextToken();
+                System.out.println("Double reached successfully");//TEST
+                return new TokenInfo(DOUBLE_LITERAL, buffer.toString(), line);
+            } else
+            	return new TokenInfo(DOT, line);
+
+It can be noticed that "Double reached successfully when the following test is
+performed,
+
+		double a = 5.0;
+		double b = .124598;
+
+The details of dealing with a leading decimal point are within the comments of
+the code.  However, leading with a decimal point is generally simpler than
+leading with a number because only floats and doubles need to be considered.
+
+The first thing that needs to be considered when dealing with a leading number
+is that a leading 0 can be interpreted as an octal value if it it referring to
+an int.
+
+For example, suppose you are dealing with a string of numbers that contains a
+leading 0.  As the string is being read from left to right, the string is
+considered octal as long as it continues to read numbers.  However, if the
+scanner reads a decimal point, it must begin to deal with the string as a
+floating point value.  Therefore, it makes sense to interpret the presence of
+a leading 0 with a boolean value that can be assigned a value of false if a
+decimal point is read.
+
+Also observe the number of leading zeros is irrelevant,
+
+	int g = 0205;//reurns 133 because it is octal
+        int i = 000000205;//number of leading zeros is irrelevant
+        double h = 001.02;//now it maintains a decimal value
+        System.out.println(i);
+        System.out.println(g);
+        System.out.println(h);   
+
+133
+133
+1.02
+
+Also note,
+
+	int j = 0x56;
+        int k = 0x000056;
+        System.out.println(k);
+        System.out.println(j);
+
+86
+86
+
+However,
+
+        double m = 0x56.23;
+        int l = 0000x56;
+
+2 errors found:
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java  [line: 21]
+Error: malformed floating point literal
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java  [line: 22]
+Error: ';' expected
+
+It is also important to note that a float does not need a decimal point
+assigned in the literal in order to qualify as a float.  For example,
+
+        float n = 23f;
+        System.out.println(n);
+
+23.0
+
+And note,
+
+        float t = 13e5f;
+        System.out.println(t);
+
+13.0
+
+But,
+
+float t = 13e5;
+
+1 error found:
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java  [line: 36]
+Error: incompatible types: possible lossy conversion from double to float
+
+Also note (this test was performed in DrJava,
+
+float sf = 0x0.123;
+
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java  [line: 46]
+Error: malformed floating point literal
+
+So in addition to using boolean values to keep track of octals, it is also
+useful to use boolean values to keep track of hexadecimal values and floats.
+Specifically, if one of the three has been assigned a true value then the
+reading of decimal point indicates a malformed floating point literal.
+Moreover, a boolean would also be useful when dealing with longs.
+
+In total, the following must be dealt with:
+1) int octal <int_literal> check
+2) int hex <int_literal> check
+3) int Long (include octal and hex) <long_literal> check 
+4) float <float_literal> check
+5) float optional e check
+6) float hex (it can start with a number or decimal point) check
+7) float hex optional p (before and after decimal, both should drive directly
+to the return of a float)  All hexadecimals that use the optional p must be
+floats.
+8) double (default) <double_literal> check
+9) double without decimal point check
+
+Things begin to get tricky when it is time to consider how to deal with
+floating point hexadecimal values that use the p modifier.  If the p modifier
+is interpreted then two things must be assumed.
+
+1) It is a hexadecimal value.  Therefore if it can be interpreted using
+ishexadecimal boolean value that it is not hexadecimal, then an error can be
+thrown immediately upon the interpretation of the p.
+
+2) It is a floating point according to DrJava, it hexadecimal floats should not
+compile without the trailing f.  However, since the final value in the
+hexadecimal must be read before it is determined whether or not it is in the
+proper format, it only makes sense that it is assumed the floating point value
+is formatted correctly and therefore should be reevaluated during parsing for
+proper formatting.
+
+Note also that Dr Java shows that it can be interpreted as a double or a
+float.
+
+	double sf = 0x12.3p3;
+        System.out.println(sf);
+
+145.5
+
+Finally I tested the code using the script option
+-t tests/fail/Literals.java
+
+package fail;
+
+/*The following tests to see if literals values are
+ * scanned but then thrown an error message.
+ */
+public class Literals {
+	
+	public static void main(String[] args){
+		double a = 5.0;//1
+		double b = .124598;//2
+		float bf = .12837f;//tests for float starting with a decimal
+		double c = 3.14e;//should skip
+		double d = 3.14e-6;//3
+		float e = 3.14f;//4
+		float f = 3.14F;//5
+		double g = 3.14d;//6
+		double h = 3.14D;//7
+		float i = 3.14e-6f;//8
+		double j = 3.14e+653d;//9
+		double k = 3.14e-628;//10
+		int l = 27;//should be fine
+		int m = 0;//should be fine
+		int n = 05;//11 (octal 1)
+		int o = 0000408;//12 (octal 2)
+		int p = 0x25;//13 (octal 3, hex 1)
+		int q = 000x25;//(octal, then identifier)
+		int r = 0x00034;//(octal 5, hex 2)
+		int s = 0981;//(octal 6, error octal)
+		
+		long ll = 27l;//should be fine
+		//long ml = 0;//should be fine
+		long nl = 05L;//11 (octal 1)
+		long ol = 0000408l;//12 (octal 2)
+		long pl = 0x25L;//13 (octal 3, hex 1)
+		long ql = 000x25l;//(reads octal, then identifier)
+		long rl = 0x0Ab3fL;//(octal 5, hex 2)
+		long sl = 0981L;//(octal 6, error octal)
+		long sli = 0981L123;
+	//(triggers an error then reads an int literal)
+		
+		long ml = 0l;//should be fine*SPECIAL CASE
+		
+		float lf = 27f;//should be fine
+		//long ml = 0;//should be fine
+		float nf = 05F;//11 (octal 1)
+		float of = 0000408f;//12 (octal 2)
+		float pf = 0x25F;//13 (octal 3, hex 1)
+		float qf = 000x25f;
+	//(interprets int, then an identifier; there shoudl be a semicolon)
+		float rf = 0x0Ab3ff;//(octal 5, hex 2)
+		float sf = 0981F;//(octal 6, error octal)
+		float sfi = 0981F456;//(octal error, then reads integer
+		
+		float sbf = 0771F;//(octal 6, error octal)
+		float mf = 0f;//should be fine*SPECIAL CASE
+		
+		float tf = 0xc5.1D3f;
+		float scf = 0.12e-3f;
+		double sd = 0.12e+3;
+		
+		double td = 123e-5d;
+		float uf = 234e3f;
+		double ud = 123e+5;
+		
+		float vf = 123p5;
+		//it sould throw an error because p is used without hex
+		double vdf = 12.3p+5;
+		//it sould throw an error because p is used without hex
+		float wf = 0x456p2F;
+		double vd = 0x789p-3;
+		
+		float wf = 0x45.6p2F;
+		double vd = 0x78.9p-3;
+				
+        double ud = 314e2;
+        double vd = 567D;
+	}
+}
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+6	 : public = public
+6	 : class = class
+6	 : <IDENTIFIER> = Literals
+6	 : { = {
+8	 : public = public
+8	 : static = static
+8	 : void = void
+8	 : <IDENTIFIER> = main
+8	 : ( = (
+8	 : <IDENTIFIER> = String
+8	 : [ = [
+8	 : ] = ]
+8	 : <IDENTIFIER> = args
+8	 : ) = )
+8	 : { = {
+9	 : double = double
+9	 : <IDENTIFIER> = a
+9	 : = = =
+9	 : <DOUBLE_LITERAL> = 5.0
+9	 : ; = ;
+10	 : double = double
+10	 : <IDENTIFIER> = b
+10	 : = = =
+10	 : <DOUBLE_LITERAL> = .124598
+10	 : ; = ;
+11	 : float = float
+11	 : <IDENTIFIER> = bf
+11	 : = = =
+11	 : <FLOAT_LITERAL> = .12837f
+11	 : ; = ;
+12	 : double = double
+12	 : <IDENTIFIER> = c
+12	 : = = =
+tests/fail/Literals.java:12	 : 12: malformed floating point literal, 3.14e
+; = ;
+13	 : double = double
+13	 : <IDENTIFIER> = d
+13	 : = = =
+13	 : <DOUBLE_LITERAL> = 3.14e-6
+13	 : ; = ;
+14	 : float = float
+14	 : <IDENTIFIER> = e
+14	 : = = =
+14	 : <FLOAT_LITERAL> = 3.14f
+14	 : ; = ;
+15	 : float = float
+15	 : <IDENTIFIER> = f
+15	 : = = =
+15	 : <FLOAT_LITERAL> = 3.14F
+15	 : ; = ;
+16	 : double = double
+16	 : <IDENTIFIER> = g
+16	 : = = =
+16	 : <DOUBLE_LITERAL> = 3.14d
+16	 : ; = ;
+17	 : double = double
+17	 : <IDENTIFIER> = h
+17	 : = = =
+17	 : <DOUBLE_LITERAL> = 3.14D
+17	 : ; = ;
+18	 : float = float
+18	 : <IDENTIFIER> = i
+18	 : = = =
+18	 : <FLOAT_LITERAL> = 3.14e-6f
+18	 : ; = ;
+19	 : double = double
+19	 : <IDENTIFIER> = j
+19	 : = = =
+19	 : <DOUBLE_LITERAL> = 3.14e+653d
+19	 : ; = ;
+20	 : double = double
+20	 : <IDENTIFIER> = k
+20	 : = = =
+20	 : <DOUBLE_LITERAL> = 3.14e-628
+20	 : ; = ;
+21	 : int = int
+21	 : <IDENTIFIER> = l
+21	 : = = =
+21	 : <INT_LITERAL> = 27
+21	 : ; = ;
+22	 : int = int
+22	 : <IDENTIFIER> = m
+22	 : = = =
+22	 : <INT_LITERAL> = 0
+22	 : ; = ;
+23	 : int = int
+23	 : <IDENTIFIER> = n
+23	 : = = =
+23	 : <INT_LITERAL> = 05
+23	 : ; = ;
+24	 : int = int
+24	 : <IDENTIFIER> = o
+24	 : = = =
+tests/fail/Literals.java:24: integer number too large for octal 0000408
+24	 : ; = ;
+25	 : int = int
+25	 : <IDENTIFIER> = p
+25	 : = = =
+25	 : <INT_LITERAL> = 0x25
+25	 : ; = ;
+26	 : int = int
+26	 : <IDENTIFIER> = q
+26	 : = = =
+26	 : <INT_LITERAL> = 000
+26	 : <IDENTIFIER> = x25
+26	 : ; = ;
+27	 : int = int
+27	 : <IDENTIFIER> = r
+27	 : = = =
+27	 : <INT_LITERAL> = 0x00034
+27	 : ; = ;
+28	 : int = int
+28	 : <IDENTIFIER> = s
+28	 : = = =
+tests/fail/Literals.java:28: integer number too large for octal 0981
+28	 : ; = ;
+30	 : long = long
+30	 : <IDENTIFIER> = ll
+30	 : = = =
+30	 : <LONG_LITERAL> = 27l
+30	 : ; = ;
+32	 : long = long
+32	 : <IDENTIFIER> = nl
+32	 : = = =
+32	 : <LONG_LITERAL> = 05L
+32	 : ; = ;
+33	 : long = long
+l33	 : <IDENTIFIER> = ol
+33	 : = = =
+tests/fail/Literals.java:33: integer number too large for octal 0000408l
+33	 : ; = ;
+34	 : long = long
+34	 : <IDENTIFIER> = pl
+34	 : = = =
+34	 : <LONG_LITERAL> = 0x25L
+34	 : ; = ;
+35	 : long = long
+35	 : <IDENTIFIER> = ql
+35	 : = = =
+35	 : <INT_LITERAL> = 000
+35	 : <IDENTIFIER> = x25l
+35	 : ; = ;
+36	 : long = long
+36	 : <IDENTIFIER> = rl
+36	 : = = =
+36	 : <LONG_LITERAL> = 0x0Ab3fL
+36	 : ; = ;
+37	 : long = long
+37	 : <IDENTIFIER> = s
+37	 : = = =
+tests/fail/Literals.java:37: integer number too large for octal 0981L
+37	 : ; = ;
+38	 : long = long
+38	 : <IDENTIFIER> = sli
+38	 : = = =
+tests/fail/Literals.java:38: integer number too large for octal 0981L
+38	 : <INT_LITERAL> = 123
+38	 : ; = ;
+40	 : long = long
+40	 : <IDENTIFIER> = ml
+40	 : = = =
+40	 : <LONG_LITERAL> = 0
+40	 : ; = ;
+42	 : float = float
+42	 : <IDENTIFIER> = lf
+42	 : = = =
+42	 : <FLOAT_LITERAL> = 27f
+42	 : ; = ;
+44	 : float = float
+44	 : <IDENTIFIER> = nf
+44	 : = = =
+44	 : <FLOAT_LITERAL> = 05F
+44	 : ; = ;
+45	 : float = float
+45	 : <IDENTIFIER> = of
+45	 : = = =
+tests/fail/Literals.java:45: integer number too large for octal 0000408
+45	 : <IDENTIFIER> = f
+45	 : ; = ;
+46	 : float = float
+46	 : <IDENTIFIER> = pf
+46	 : = = =
+46	 : <FLOAT_LITERAL> = 0x25F
+46	 : ; = ;
+47	 : float = float
+47	 : <IDENTIFIER> = qf
+47	 : = = =
+47	 : <INT_LITERAL> = 000
+47	 : <IDENTIFIER> = x25f
+47	 : ; = ;
+48	 : float = float
+48	 : <IDENTIFIER> = rf
+48	 : = = =
+48	 : <FLOAT_LITERAL> = 0x0Ab3ff
+48	 : ; = ;
+49	 : float = float
+49	 : <IDENTIFIER> = sf
+49	 : = = =
+tests/fail/Literals.java:49: integer number too large for octal 0981
+49	 : <IDENTIFIER> = F
+49	 : ; = ;
+50	 : float = float
+50	 : <IDENTIFIER> = sfi
+50	 : = = =
+tests/fail/Literals.java:50: integer number too large for octal 0981
+50	 : <IDENTIFIER> = F456
+50	 : ; = ;
+52	 : float = float
+52	 : <IDENTIFIER> = sbf
+52	 : = = =
+52	 : <FLOAT_LITERAL> = 0771F
+52	 : ; = ;
+53	 : float = float
+53	 : <IDENTIFIER> = mf
+53	 : = = =
+53	 : <FLOAT_LITERAL> = 0
+53	 : ; = ;
+55	 : float = float
+55	 : <IDENTIFIER> = tf
+55	 : = = =
+55	 : <FLOAT_LITERAL> = 0xc5.1D3f
+55	 : ; = ;
+56	 : float = float
+56	 : <IDENTIFIER> = scf
+56	 : = = =
+56	 : <FLOAT_LITERAL> = 0.12e-3f
+56	 : ; = ;
+57	 : double = double
+57	 : <IDENTIFIER> = sd
+57	 : = = =
+57	 : <DOUBLE_LITERAL> = 0.12e+3
+57	 : ; = ;
+59	 : double = double
+59	 : <IDENTIFIER> = td
+59	 : = = =
+59	 : <DOUBLE_LITERAL> = 123e-5d
+59	 : ; = ;
+60	 : float = float
+60	 : <IDENTIFIER> = uf
+60	 : = = =
+60	 : <FLOAT_LITERAL> = 234e3f
+60	 : ; = ;
+61	 : double = double
+61	 : <IDENTIFIER> = ud
+61	 : = = =
+61	 : <DOUBLE_LITERAL> = 123e+5
+61	 : ; = ;
+63	 : float = float
+63	 : <IDENTIFIER> = vf
+63	 : = = =
+tests/fail/Literals.java:63: malformed floating point literal.  P used for non-hexadecimal = 123p
+63	 : <IDENTIFIER> = p5
+63	 : ; = ;
+64	 : double = double
+64	 : <IDENTIFIER> = vdf
+64	 : = = =
+64	 : <DOUBLE_LITERAL> = 12.3
+64	 : <IDENTIFIER> = p
+64	 : + = +
+64	 : <INT_LITERAL> = 5
+64	 : ; = ;
+65	 : float = float
+65	 : <IDENTIFIER> = wf
+65	 : = = =
+65	 : <FLOAT_LITERAL> = 0x456p2F
+65	 : ; = ;
+66	 : double = double
+66	 : <IDENTIFIER> = vd
+66	 : = = =
+66	 : <DOUBLE_LITERAL> = 0x789p-3
+66	 : ; = ;
+68	 : float = float
+68	 : <IDENTIFIER> = wf
+68	 : = = =
+68	 : <FLOAT_LITERAL> = 0x45.6p2F
+68	 : ; = ;
+69	 : double = double
+69	 : <IDENTIFIER> = vd
+69	 : = = =
+69	 : <DOUBLE_LITERAL> = 0x78.9p-3
+69	 : ; = ;
+71	 : double = double
+71	 : <IDENTIFIER> = ud
+71	 : = = =
+71	 : <DOUBLE_LITERAL> = 314e2
+71	 : ; = ;
+72	 : double = double
+72	 : <IDENTIFIER> = vd
+72	 : = = =
+72	 : <INT_LITERAL> = 567
+72	 : <IDENTIFIER> = D
+72	 : ; = ;
+73	 : } = }
+74	 : } = }
+74	 : <EOF> = <EOF>
+
+Question 7)
+
+The final question asks to deal with other means for representing characters
+in Strings and chars.  This could be extremely extensive if you consider
+everyting that unicode has to offer:
+
+http://unicode-table.com/en/#control-character
+
+
+Since the rubric states that it is looking for all of the escpae sequences,
+the followig test was created:
+
+package fail;
+
+public class CharsAndString {
+	//All escaped chars in strings, in chars
+	'\b'
+	'\t' '\n' '\f' '\r' '\"' 
+	'\'' 
+	'\\' 
+	
+	"\b \t \n \f \r \" \' \\ "
+	
+	'\p'  //throws an error
+	
+	"\p"  //throws an error
+}
+
+The results of the test using the -t option is as follows:
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = CharsAndString
+3	 : { = {
+5	 : <CHAR_LITERAL> = '\b'
+6	 : <CHAR_LITERAL> = '\t'
+6	 : <CHAR_LITERAL> = '\n'
+6	 : <CHAR_LITERAL> = '\f'
+6	 : <CHAR_LITERAL> = '\r'
+6	 : <CHAR_LITERAL> = '"'
+7	 : <CHAR_LITERAL> = '\''
+8	 : <CHAR_LITERAL> = '\\'
+10	 : <STRING_LITERAL> = "\b \t \n \f \r " \' \\ "
+tests/fail/CharsAndString.java:12: Badly formed escape: \p
+12	 : <CHAR_LITERAL> = ''
+tests/fail/CharsAndString.java:14: Badly formed escape: \p
+14	 : <STRING_LITERAL> = ""
+15	 : } = }
+15	 : <EOF> = <EOF>
+
+Nothing needs to be added to Scanner for this work because it was originally
+designed to support these escape sequences.  The are defined as escape
+sequences by Java in the following documentation:
+
+http://docs.oracle.com/javase/tutorial/java/data/characters.html
+
+In addition this, it seems to make sense to add some unicode characters.  The
+first problem that needed to be solved was figuring out how to add the
+characters to TokenKind.java.  This can be done by simply adding the generic
+UNICODE("<UNICODE>").  Next modifications need to be made in Scanner.  The
+basic unicode characters run from \u0000 to \uffff.  There are more than this.
+But these numbers can be captured using a reasonably simple algorithm.
+Further, it captures 65,535 new characters.  It can be done by adding a
+modification to the escape sequence.  The first letter after the escape
+sequence must be a lower case u because this all my Dr. Java compiler will
+accept.
+
+Ultimately, the UNICODE in TokenKind went unused but perhaps it will serve a
+future purpose.  The choice of using between \u0000 and \uFFFF was recognized
+by Professor Campbell in class.  Here are the tests and the results with the -t
+option.
+
+package fail;
+
+public class unicode {
+	String a = "Here's unicode \u0019  !!!";
+	Character b = '\u0123';
+	String c = "Here's unicode \u4567";
+	String d = "\u89ab  !!!";
+	String d = "\ucdef";
+	Character e = '\uABCD';
+	Character f = '\uEF12';
+	Character g = '\uG451';//error
+	Character h = '\u34';//error
+}
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = unicode
+3	 : { = {
+4	 : <IDENTIFIER> = String
+4	 : <IDENTIFIER> = a
+4	 : = = =
+4	 : <STRING_LITERAL> = "Here's unicode \u0019  !!!"
+4	 : ; = ;
+5	 : <IDENTIFIER> = Character
+5	 : <IDENTIFIER> = b
+5	 : = = =
+5	 : <CHAR_LITERAL> = '\u0123'
+5	 : ; = ;
+6	 : <IDENTIFIER> = String
+6	 : <IDENTIFIER> = c
+6	 : = = =
+6	 : <STRING_LITERAL> = "Here's unicode \u4567"
+6	 : ; = ;
+7	 : <IDENTIFIER> = String
+7	 : <IDENTIFIER> = d
+7	 : = = =
+7	 : <STRING_LITERAL> = "\u89ab  !!!"
+7	 : ; = ;
+8	 : <IDENTIFIER> = String
+8	 : <IDENTIFIER> = d
+8	 : = = =
+8	 : <STRING_LITERAL> = "\ucdef"
+8	 : ; = ;
+9	 : <IDENTIFIER> = Character
+9	 : <IDENTIFIER> = e
+9	 : = = =
+9	 : <CHAR_LITERAL> = '\uABCD'
+9	 : ; = ;
+10	 : <IDENTIFIER> = Character
+10	 : <IDENTIFIER> = f
+10	 : = = =
+10	 : <CHAR_LITERAL> = '\uEF12'
+10	 : ; = ;
+11	 : <IDENTIFIER> = Character
+11	 : <IDENTIFIER> = g
+11	 : = = =
+tests/fail/unicode.java:11: unicode must be have 4 digits between \u0000 and \uffff
+tests/fail/unicode.java:11: 4 found by scanner where closing ' was expected.
+11	 : <CHAR_LITERAL> = '
+tests/fail/unicode.java:11: / found by scanner where closing ' was expected.
+11	 : <CHAR_LITERAL> = ';
+12	 : <IDENTIFIER> = Character
+12	 : <IDENTIFIER> = h
+12	 : = = =
+tests/fail/unicode.java:12: unicode must be have 4 digits between \u0000 and \uffff
+tests/fail/unicode.java:12: ; found by scanner where closing ' was expected.
+12	 : <CHAR_LITERAL> = '
+12	 : ; = ;
+13	 : } = }
+14	 : <EOF> = <EOF>
+
+And here is the final run of the build.
+
+Buildfile: C:\Users\bwils_000\Desktop\eclipse projects\j--\build.xml
+
+compile:
+     [echo] Compiling j-- source files...
+
+compileSPIM:
+     [echo] Compiling j-- source files...
+
+jar:
+     [echo] Bundling class files into jar files...
+
+runCompilerTests:
+     [echo] Compiling and running j-- (JVM) programs...
+    [junit] Running junit.JMinusMinusTest
+    [junit] Testsuite: junit.JMinusMinusTest
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java:5: Type sought where '\b' found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java:12: Badly formed escape: \p
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java:14: Badly formed escape: \p
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Division.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Division.java:5: Type char doesn't match type int
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Keywords.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Keywords.java:4: Type sought where const found
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:11: Unidentified input token: '#'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:11: . found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:11: Type sought where . found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: ( found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: Type sought where ( found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: [ found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: Type sought where [ found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: ) found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: Type sought where ) found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: . found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: Type sought where . found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: . found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: Type sought where . found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: ( found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: Type sought where ( found
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:9: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:9: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:10: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:10: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:11: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:11: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:12: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:12: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:12: malformed floating point literal, 3.14e
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:13: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:13: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:14: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:15: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:15: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:16: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:16: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:17: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:17: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:18: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:18: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:19: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:19: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:20: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:20: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:24: integer number too large for octal 0000408
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:24: Literal sought where ; found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:26: x25 found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:26: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:28: integer number too large for octal 0981
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:28: Literal sought where ; found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:30: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:30: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:32: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:32: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:33: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:33: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:33: integer number too large for octal 0000408l
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:34: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:34: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:35: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:35: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:36: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:36: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:37: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:37: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:37: integer number too large for octal 0981L
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:38: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:38: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:38: integer number too large for octal 0981L
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:40: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:40: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:42: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:42: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:44: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:44: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:45: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:45: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:45: integer number too large for octal 0000408
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:46: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:46: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:47: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:47: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:48: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:48: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:49: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:49: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:49: integer number too large for octal 0981
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:50: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:50: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:50: integer number too large for octal 0981
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:52: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:52: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:53: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:53: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:55: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:55: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:56: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:56: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:57: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:57: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:59: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:59: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:60: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:60: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:61: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:61: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:63: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:63: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:63: malformed floating point literal.  P used for non-hexadecimal = 123p
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:64: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:64: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:65: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:65: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:66: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:66: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:68: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:68: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:69: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:69: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:71: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:71: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:72: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:72: Invalid statement expression; it does not have a side-effect
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Modulo.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Modulo.java:5: Type char doesn't match type int
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Operators.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Operators.java:4: Type sought where ? found
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Literal sought where for found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:17: Type sought where return found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: void found where class sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: ( found where { sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: Type sought where ( found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: [ found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: Type sought where [ found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: ) found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: Type sought where ) found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:22: ( found where <IDENTIFIER> sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:25: } found where class sought
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\TypeErrors.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\TypeErrors.java:14: Type int doesn't match type boolean
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java ...
+    [junit] 
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: unicode must be have 4 digits between \u0000 and \uffff
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: 4 found by scanner where closing ' was expected.
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: / found by scanner where closing ' was expected.
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: '; found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: Type sought where '; found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: h found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: = found where <IDENTIFIER> sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: unicode must be have 4 digits between \u0000 and \uffff
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: ; found by scanner where closing ' was expected.
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Animalia.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Arrays.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Classes.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Division.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Factorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\GCD.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\HelloWorld.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Inits.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntBitwise.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntFactorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Kast.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Modulo.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\MultiComments.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Series.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Strings.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\UnaryPlus.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.816 sec
+    [junit] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.816 sec
+    [junit] ------------- Standard Output ---------------
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Division.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Keywords.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Modulo.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Operators.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\TypeErrors.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Animalia.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Arrays.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Classes.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Division.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Factorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\GCD.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\HelloWorld.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Inits.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntBitwise.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\IntFactorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Kast.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Modulo.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\MultiComments.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Series.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\Strings.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\pass\UnaryPlus.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] ------------- ---------------- ---------------
+    [junit] ------------- Standard Error -----------------
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java:5: Type sought where '\b' found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java:12: Badly formed escape: \p
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\CharsAndString.java:14: Badly formed escape: \p
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Division.java:5: Type char doesn't match type int
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Keywords.java:4: Type sought where const found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:11: Unidentified input token: '#'
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:11: . found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:11: Type sought where . found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: ( found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: Type sought where ( found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: [ found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: Type sought where [ found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: ) found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:12: Type sought where ) found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: . found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: Type sought where . found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: . found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: Type sought where . found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: ( found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\LexicalErrors.java:13: Type sought where ( found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:9: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:9: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:10: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:10: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:11: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:11: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:12: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:12: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:12: malformed floating point literal, 3.14e
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:13: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:13: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:14: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:15: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:15: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:16: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:16: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:17: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:17: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:18: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:18: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:19: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:19: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:20: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:20: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:24: integer number too large for octal 0000408
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:24: Literal sought where ; found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:26: x25 found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:26: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:28: integer number too large for octal 0981
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:28: Literal sought where ; found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:30: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:30: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:32: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:32: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:33: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:33: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:33: integer number too large for octal 0000408l
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:34: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:34: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:35: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:35: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:36: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:36: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:37: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:37: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:37: integer number too large for octal 0981L
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:38: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:38: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:38: integer number too large for octal 0981L
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:40: Literal sought where long found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:40: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:42: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:42: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:44: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:44: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:45: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:45: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:45: integer number too large for octal 0000408
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:46: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:46: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:47: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:47: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:48: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:48: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:49: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:49: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:49: integer number too large for octal 0981
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:50: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:50: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:50: integer number too large for octal 0981
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:52: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:52: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:53: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:53: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:55: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:55: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:56: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:56: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:57: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:57: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:59: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:59: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:60: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:60: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:61: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:61: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:63: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:63: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:63: malformed floating point literal.  P used for non-hexadecimal = 123p
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:64: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:64: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:65: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:65: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:66: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:66: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:68: Literal sought where float found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:68: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:69: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:69: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:71: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:71: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:72: Literal sought where double found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Literals.java:72: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Modulo.java:5: Type char doesn't match type int
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\Operators.java:4: Type sought where ? found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Literal sought where for found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:14: Invalid statement expression; it does not have a side-effect
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:17: Type sought where return found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: void found where class sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: ( found where { sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: Type sought where ( found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: [ found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: Type sought where [ found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: ) found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:20: Type sought where ) found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:22: ( found where <IDENTIFIER> sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\SyntaxErrors.java:25: } found where class sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\TypeErrors.java:14: Type int doesn't match type boolean
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: unicode must be have 4 digits between \u0000 and \uffff
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: 4 found by scanner where closing ' was expected.
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: / found by scanner where closing ' was expected.
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: '; found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:11: Type sought where '; found
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: h found where ; sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: = found where <IDENTIFIER> sought
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: unicode must be have 4 digits between \u0000 and \uffff
+    [junit] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\fail\unicode.java:12: ; found by scanner where closing ' was expected.
+    [junit] ------------- ---------------- ---------------
+    [junit] 
+    [junit] Testcase: testFail took 0.549 sec
+    [junit] Testcase: testPass took 0.249 sec
+    [junit] Running junit.JMinusMinusTestRunner
+    [junit] Testsuite: junit.JMinusMinusTestRunner
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 sec
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 sec
+    [junit] 
+    [junit] Testcase: testMessage took 0.002 sec
+    [junit] Testcase: testFactorial took 0.001 sec
+    [junit] Testcase: testCompute took 0 sec
+    [junit] Testcase: testComputeSum took 0.001 sec
+    [junit] Testcase: testMessage took 0.002 sec
+    [junit] Testcase: testDivide took 0 sec
+    [junit] Testcase: testModulo took 0.001 sec
+    [junit] Testcase: testUnaryPlus took 0.001 sec
+    [junit] Testcase: testIntBitwise took 0 sec
+
+BUILD SUCCESSFUL
+Total time: 2 seconds

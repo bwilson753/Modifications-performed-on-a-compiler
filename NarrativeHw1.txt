@@ -1,0 +1,1541 @@
+Robert Wilson
+HW1 Narrative
+CS451
+
+I added the division operator by the following the instructions in the book,
+
+I first added the Division pass test, then I compiled the test to see what
+would happen, and I got the following response,
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass
+\Division.java
+tests\pass\Division.java:4: Operator / is not supported in j--.
+tests\pass\Division.java:4: y found where ; sought
+tests\pass\Division.java:4: Invalid statement expression; it does not have a 
+side-effect
+
+This would be expected since the modification were still not complete.
+
+I had to add the following to the top of DivisionTest,
+
+package junit;
+
+import junit.framework.TestCase;
+
+import pass.Division;
+
+I then added the DivisionTest which also did not work because Division did not
+compile,
+
+[junit] Test junit.JMinusMinusTest FAILED
+       [javac] Compiling 1 source file to C:\Users\bwils_000\Desktop\
+eclipse projects\j--\classes
+       [javac] C:\Users\bwils_000\Desktop\eclipse projects\j--\tests\junit\
+DivisionTest.java:5: error: cannot find symbol
+       [javac] import pass.Division;
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\junit\
+DivisionTest.java
+tests\junit\DivisionTest.java:10: throws found where { sought
+tests\junit\DivisionTest.java:10: { found where ; sought
+tests\junit\DivisionTest.java:14: Literal sought where protected found
+tests\junit\DivisionTest.java:14: Invalid statement expression; it does not 
+have a side-effect
+
+The same fail occurred after the test suite was added.  Finally, the fail test
+was added but since the modification still had not been made it produced the
+compilation error:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\fail
+\Division.java
+tests\fail\Division.java:5: Operator / is not supported in j--.
+tests\fail\Division.java:5: 42 found where ) sought
+
+Once the changes to TokenKind and Scanner were made the compiler response
+changed to:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass
+\Division.java
+tests\pass\Division.java:4: / found where ; sought
+tests\pass\Division.java:4: Literal sought where / found
+tests\pass\Division.java:4: Invalid statement expression; it does not have a 
+side-effect
+
+However when "-t tests/pass/Division.java" is run through eclipse, the
+following response can be seen,
+
+1	 : package = package
+1	 : <IDENTIFIER> = pass
+1	 : ; = ;
+2	 : public = public
+2	 : class = class
+2	 : <IDENTIFIER> = Division
+2	 : { = {
+3	 : public = public
+3	 : int = int
+3	 : <IDENTIFIER> = divide
+3	 : ( = (
+3	 : int = int
+3	 : <IDENTIFIER> = x
+3	 : , = ,
+3	 : int = int
+3	 : <IDENTIFIER> = y
+3	 : ) = )
+3	 : { = {
+4	 : return = return
+4	 : <IDENTIFIER> = x
+4	 : / = /
+4	 : <IDENTIFIER> = y
+4	 : ; = ;
+5	 : } = }
+6	 : } = }
+6	 : <EOF> = <EOF>
+
+So it can be seen that Scanner is working properly.
+
+Once the changes to Parser are made and JDivideOp is added the following is
+the result of running -p tests/pass/Division.java,
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/Division.java"/>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="2" name="Division" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="3" name="divide" returnType="int">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="3" name="x" type="int"/>
+          <JFormalParameter line="3" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="3">
+            <JReturnStatement line="4">
+              <JBinaryExpression line="4" type="" operator="/">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+So it can be seen that Parser is running properly.  However, when
+Division.java is compiled, the error has now changed to:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass
+\Division.java
+Exception in thread "main" java.lang.NullPointerException
+        at jminusminus.JReturnStatement.analyze(JReturnStatement.java:80)
+        at jminusminus.JReturnStatement.analyze(JReturnStatement.java:13)
+        at jminusminus.JBlock.analyze(JBlock.java:60)
+        at jminusminus.JMethodDeclaration.analyze(JMethodDeclaration.java:158)
+        at jminusminus.JClassDeclaration.analyze(JClassDeclaration.java:201)
+        at jminusminus.JCompilationUnit.analyze(JCompilationUnit.java:184)
+        at jminusminus.Main.main(Main.java:133)
+
+Once analyze has been added the compilation is successful.
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass
+\Division.java
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->
+
+However, it still can not be run,
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->java pass.Division
+Exception in thread "main" java.lang.VerifyError: (class: pass/Division, 
+method: divide signature: (II)I) Unable to pop operand off an empty stack
+        at java.lang.Class.getDeclaredMethods0(Native Method)
+        at java.lang.Class.privateGetDeclaredMethods(Unknown Source)
+        at java.lang.Class.privateGetMethodRecursive(Unknown Source)
+        at java.lang.Class.getMethod0(Unknown Source)
+        at java.lang.Class.getMethod(Unknown Source)
+        at sun.launcher.LauncherHelper.validateMainClass(Unknown Source)
+        at sun.launcher.LauncherHelper.checkAndLoadMain(Unknown Source)
+
+But analyze does appear to be working as can be see when 
+"-a tests/pass/Division.java" is run,
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/Division.java"/>
+  <CompilationUnitContext>
+    <Entries>
+      <Entry>Object</Entry>
+      <Entry>java.lang.Object</Entry>
+      <Entry>Division</Entry>
+      <Entry>pass.Division</Entry>
+      <Entry>String</Entry>
+      <Entry>java.lang.String</Entry>
+    </Entries>
+  </CompilationUnitContext>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="2" name="Division" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="3" name="divide" returnType="int">
+        <MethodContext>
+          <LocalContext>
+            <Entries>
+              <Entry name="x" offset="1"/>
+              <Entry name="y" offset="2"/>
+            </Entries>
+          </LocalContext>
+        </MethodContext>
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="3" name="x" type="int"/>
+          <JFormalParameter line="3" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="3">
+            <LocalContext>
+              <Entries>
+              </Entries>
+            </LocalContext>
+            <JReturnStatement line="4">
+              <JBinaryExpression line="4" type="int" operator="/">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Once the codegen has been added the build is successful as well as
+TestDivision,
+
+[junit] Running junit.JMinusMinusTestRunner
+       [junit] Testsuite: junit.JMinusMinusTestRunner
+       [junit] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, 
+	Time elapsed: 0.012 sec
+       [junit] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, 
+	Time elapsed: 0.012 sec
+       [junit] Testcase: testMessage took 0.002 sec
+       [junit] Testcase: testFactorial took 0.001 sec
+       [junit] Testcase: testCompute took 0.001 sec
+       [junit] Testcase: testComputeSum took 0.001 sec
+       [junit] Testcase: testMessage took 0.005 sec
+       [junit] Testcase: testDivide took 0.001 sec
+BUILD SUCCESSFUL
+Total time: 5 seconds
+
+Further, Division.java compiles and it's runtime error is only in regard to
+the fact that it does not contain a main method:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass
+\Division.java
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->java pass.Division
+Error: Main method not found in class pass.Division, please define the main 
+method as:
+   public static void main(String[] args)
+or a JavaFX application class must extend javafx.application.Application
+
+Question 4)
+
+When writing code to add the modulo operator I used logic similar to what was
+used for Division.  When first writing the fail test when attempting to
+compile the initial error is,
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\fail\Modulo.java
+tests\fail\Modulo.java:5: Unidentified input token: '%'
+tests\fail\Modulo.java:5: 42 found where ) sought
+
+When writing the test in the pass folder the first thing I
+did was run the file through eclipse with no options.  There was initially an
+error due to the mod operator being unrecognized.
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass\Modulo.java
+tests\pass\Modulo.java:4: Unidentified input token: '%'
+tests\pass\Modulo.java:4: y found where ; sought
+tests\pass\Modulo.java:4: Invalid statement expression; it does not have a 
+side-effect  
+
+The appropriate code was added to grammar and lexicalgrammar:
+
+MOD	::= "%"
+
+multiplicativeExpression ::= unaryExpression       // level 2
+                               {(STAR | DIV | MOD) unaryExpression}
+
+I added to TokenKind MOD("%").  In Scanner, I added the mod
+operator into the case section near the star operator.  In JBinary expression,
+I added code using the same logic as divide, and then found the JVM IREM
+online here, 
+
+https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.idiv
+
+so that it could be put into the arguments list of addNoArgInstruction.
+
+After adding mod to scanner the following test was run 
+"-t tests/pass/Modulo.java":
+
+1	 : package = package
+1	 : <IDENTIFIER> = pass
+1	 : ; = ;
+2	 : public = public
+2	 : class = class
+2	 : <IDENTIFIER> = Modulo
+2	 : { = {
+3	 : public = public
+3	 : int = int
+3	 : <IDENTIFIER> = mod
+3	 : ( = (
+3	 : int = int
+3	 : <IDENTIFIER> = x
+3	 : , = ,
+3	 : int = int
+3	 : <IDENTIFIER> = y
+3	 : ) = )
+3	 : { = {
+4	 : return = return
+4	 : <IDENTIFIER> = x
+4	 : % = %
+4	 : <IDENTIFIER> = y
+4	 : ; = ;
+5	 : } = }
+6	 : } = }
+6	 : <EOF> = <EOF>
+
+Showing that the scanner is working.
+
+Next, I added the requisite code to multiplicativeEXpression in Parser.  It
+was added just below divide.  I then ran the following test:
+"-p tests/pass/Modulo.java"
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/Modulo.java"/>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="2" name="Modulo" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="3" name="mod" returnType="int">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="3" name="x" type="int"/>
+          <JFormalParameter line="3" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="3">
+            <JReturnStatement line="4">
+              <JBinaryExpression line="4" type="" operator="%">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Analyze was based on Division.  When it was added there was the following
+result, "-a tests/pass/Modulo.java"
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/Modulo.java"/>
+  <CompilationUnitContext>
+    <Entries>
+      <Entry>pass.Modulo</Entry>
+      <Entry>Modulo</Entry>
+      <Entry>Object</Entry>
+      <Entry>java.lang.Object</Entry>
+      <Entry>String</Entry>
+      <Entry>java.lang.String</Entry>
+    </Entries>
+  </CompilationUnitContext>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="2" name="Modulo" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="3" name="mod" returnType="int">
+        <MethodContext>
+          <LocalContext>
+            <Entries>
+              <Entry name="x" offset="1"/>
+              <Entry name="y" offset="2"/>
+            </Entries>
+          </LocalContext>
+        </MethodContext>
+        <Modifiers>
+          <Modifier name="public"/>
+BinaryExpression        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="3" name="x" type="int"/>
+          <JFormalParameter line="3" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="3">
+            <LocalContext>
+              <Entries>
+              </Entries>
+            </LocalContext>
+            <JReturnStatement line="4">
+              <JBinaryExpression line="4" type="int" operator="%">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </J>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+I
+also wrote the requisite code into lexicalgrammar and grammar.  And then I
+ran the pass Modulo.java to confirm that there were no errors. 
+
+Codgen was based on divide.  Once it was added, all of the tests worked:
+
+[junit] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, 
+Time elapsed: 0.013 sec
+       [junit] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, 
+Time elapsed: 0.013 sec
+       [junit] Testcase: testMessage took 0.001 sec
+       [junit] Testcase: testFactorial took 0.001 sec
+       [junit] Testcase: testCompute took 0.002 sec
+       [junit] Testcase: testComputeSum took 0.002 sec
+       [junit] Testcase: testMessage took 0.003 sec
+       [junit] Testcase: testDivide took 0.002 sec
+       [junit] Testcase: testModulo took 0.001 sec 
+BUILD SUCCESSFUL
+Total time: 5 seconds
+An important lesson that I learned from adding the mod operator is that the
+errors that was shown for the mod operator was that the import pass.Modulo was
+unrecognized until all the necessary code was written.  I wasn't sure that
+this was the cause until I completed all the necessary code.
+
+
+Question 5)
+
+According to,
+
+https://docs.oracle.com/javase/tutorial/java/nutsandbolts/op1.html
+
+the unary plus operator is described as an operator that indicates
+positive value (numbers are positive without this, however).  This basically
+means that the unary plus operator does not affect the value of the
+expression.  For example,
+
+int a = -1;
+System.out.println(a);//prints -1
+int b = +a;
+System.out.println(b);//still prints -1
+
+On 91 in the grammar file, it currently states,
+
+unaryExpression ::= INC unaryExpression  // level 1
+                  | MINUS unaryExpression
+                  | simpleUnaryExpression
+
+but it also contains
+
+simpleUnaryExpression ::= LNOT unaryExpression
+                        | LPAREN basicType RPAREN unaryExpression //casted
+                        | LPAREN // casted               
+                            referenceType
+                          RPAREN simpleUnaryExpression
+                        | postfixExpression 
+
+Note that it is unnecessary to add anything to the lexical grammar file
+because PLUS is already there.
+
+And so the following change is made to grammar,
+
+unaryExpression ::= INC unaryExpression  // level 1
+                  | MINUS unaryExpression
+                  | PLUS unaryExpression
+                  | simpleUnaryExpression
+
+This references casts in a manner similar to the Oracle documentation.
+
+The next step is to look through Scanner to see if it supports unary minus.
+
+If the Scanner reads a plus it currently assesses the following conditions,
+ case '+':
+            nextCh();
+            if (ch == '=') {
+                nextCh();
+                return new TokenInfo(PLUS_ASSIGN, line);
+            } else if (ch == '+') {
+                nextCh();
+                return new TokenInfo(INC, line);
+            } else {
+                return new TokenInfo(PLUS, line);
+            }
+
+So if the next character is an int (no white space), then the Scanner should
+evaluate the int while ignoring the white space.  How does the Scanner
+evaluate an int?  Towards the bottom it can be seen that it performs as
+follows,
+
+case '0':
+            // Handle only simple decimal integers for now.
+            nextCh();
+            return new TokenInfo(INT_LITERAL, "0", line);
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            buffer = new StringBuffer();
+            while (isDigit(ch)) {
+                buffer.append(ch);
+                nextCh();
+            }
+            return new TokenInfo(INT_LITERAL, buffer.toString(), line);
+
+
+Do any changes need to be made to Scanner It doesn't appear that they do.
+Moreover, it doesn't appear that any changes were made to deal with unary
+minus. 
+
+Now test should be created,
+
+1)
+package pass;
+
+public class UnaryPlus {
+	public int unaryPlus(int x){
+		//return -x;//test
+		return +x;
+	}
+}
+
+The lack of need to modify Scanner can be confirmed using the -t modifier:
+
+1	 : package = package
+1	 : <IDENTIFIER> = pass
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = UnaryPlus
+3	 : { = {
+4	 : public = public
+4	 : int = int
+4	 : <IDENTIFIER> = unaryPlus
+4	 : ( = (
+4	 : int = int
+4	 : <IDENTIFIER> = x
+4	 : ) = )
+4	 : { = {
+6	 : return = return
+6	 : + = +
+6	 : <IDENTIFIER> = x
+6	 : ; = ;
+7	 : } = }
+8	 : } = }
+8	 : <EOF> = <EOF>
+
+Looking forward into Parser, it can be seen that the following code
+exists,
+
+/**
+     * Parse an unary expression.
+     * 
+     * <pre>
+     *   unaryExpression ::= INC unaryExpression // level 1
+     *                     | MINUS unaryExpression
+     *                     | simpleUnaryExpression
+     * </pre>
+     * 
+     * @return an AST for an unaryExpression.
+     */
+
+    private JExpression unaryExpression() {
+        int line = scanner.token().line();
+        if (have(INC)) {
+            return new JPreIncrementOp(line, unaryExpression());
+        } else if (have(MINUS)) {
+            return new JNegateOp(line, unaryExpression());
+        } else {
+            return simpleUnaryExpression();
+        }
+    }
+
+Note that the first else if condition deals with the unary minus,  Further,
+looking into JUnaryExpression it can be seen that the unary minus is dealt
+with as follows,
+
+/**
+ * The AST node for a unary negation (-) expression.
+ */
+
+class JNegateOp extends JUnaryExpression {
+
+    /**
+     * Construct an AST node for a negation expression given its line number,
+     * and the operand.
+     * 
+     * @param line
+     *            line in which the negation expression occurs in the source
+     *            file.
+     * @param arg
+     *            the operand.
+     */
+
+    public JNegateOp(int line, JExpression arg) {
+        super(line, "-", arg);
+    }
+
+    /**
+     * Analyzing the negation operation involves analyzing its operand, 
+checking
+     * its type and determining the result type.
+     * 
+     * @param context
+     *            context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JExpression analyze(Context context) {
+        arg = arg.analyze(context);
+        arg.type().mustMatchExpected(line(), Type.INT);
+        type = Type.INT;
+        return this;
+    }
+
+    /**
+     * Generating code for the negation operation involves generating code for
+     * the operand, and then the negation instruction.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+        arg.codegen(output);
+        output.addNoArgInstruction(INEG);
+    }
+
+}
+
+And so this can be used as a template for dealing with the unary plus.  Note
+that instead of modifying JbinaryExpression, JUnaryExpression is being
+modified.
+
+It is also a good idea to first build tests for the unary plus operations but
+initially modify them so that they test for unary minus.  This will ensure
+greater accuracy for the testing of unary plus.  The reason is it more
+accurate is if you can show that the unary minus tests are successful then you
+can be very secure in the knowledge that the tests have been properly written
+because the changes that are necessary to test for unary plus are trivial.
+
+Once the test is converted to unary plus, it can be seen that the following
+error message is displayed,
+
+[junit] Testcase: testUnaryPlus took 0.007 sec
+       [junit] 	FAILED
+       [junit] expected:<-5> but was:<5>
+
+The test was based on the following two files
+
+1)
+package pass;
+
+public class UnaryPlus {
+	public int unaryPlus(int x){
+		//return -x;//test
+		return +x;
+	}
+}
+
+2)
+package junit;
+
+import junit.framework.TestCase;
+
+import pass.UnaryPlus;
+
+public class UnaryPlusTest extends TestCase {
+	private UnaryPlus up;
+	
+	protected void setUp() throws Exception {
+		super.setUp();
+		up = new UnaryPlus();
+	}
+	
+	protected void tearDown() throws Exception {
+		super.tearDown();
+	}
+	
+	public void testUnaryPlus() {
+		this.assertEquals(up.unaryPlus(5), 5);
+		this.assertEquals(up.unaryPlus(-3), -3);
+		//this.assertEquals(up.unaryPlus(5), -5);//test
+		//this.assertEquals(up.unaryPlus(-3), 3);//test
+		this.assertEquals(up.unaryPlus(0), 0);
+	}
+}
+
+And so this is not the expected result.  Therefore the following changes were
+made to Parser and JUnaryExpression,
+
+PARSER
+    private JExpression unaryExpression() {
+        int line = scanner.token().line();
+        if (have(INC)) {
+            return new JPreIncrementOp(line, unaryExpression());
+        } else if (have(MINUS)) {
+            return new JNegateOp(line, unaryExpression());
+        } else if (have(PLUS)) {//added for Unary plus
+            return new JNoNegateOp(line, unaryExpression());
+        } else {
+            return simpleUnaryExpression();
+        }
+    }
+
+Using the -p option it can be seen that this is successful:
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/UnaryPlus.java"/>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="UnaryPlus" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="unaryPlus" returnType="int">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="x" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JReturnStatement line="6">
+              <JUnaryExpression line="6" type="" operator="+">
+                <Operand>
+                  <JVariable name="x"/>
+                </Operand>
+              </JUnaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+JUNARYEXPRESSION
+//the following code was added to deal with the unary plus operator
+class JNoNegateOp extends JUnaryExpression {
+
+    /**
+     * Construct an AST node for a unary plus expression given its line number,
+     * and the operand.
+     * 
+     * @param line
+     *            line in which the no negation expression occurs in the source
+     *            file.
+     * @param arg
+     *            the operand.
+     */
+	//changed to NoNegate, + added
+    public JNoNegateOp(int line, JExpression arg) {
+        super(line, "+", arg);
+    }
+
+    /**
+     * Analyzing the negation operation involves analyzing its operand, 
+checking
+     * its type and determining the result type.
+     * 
+     * @param context
+     *            context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JExpression analyze(Context context) {
+        arg = arg.analyze(context);
+        arg.type().mustMatchExpected(line(), Type.INT);
+        type = Type.INT;
+        return this;
+    }
+
+    /**
+     * Generating code for the no negation operation involves generating code 
+for
+     * the operand, and then no further instruction.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+        arg.codegen(output);
+        //output.addNoArgInstruction(INEG);
+        //this is removed because the value should not be modified.
+    }
+
+}
+
+Using -a it can be seen that analyze works:
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/UnaryPlus.java"/>
+  <CompilationUnitContext>
+    <Entries>
+      <Entry>UnaryPlus</Entry>
+      <Entry>Object</Entry>
+      <Entry>java.lang.Object</Entry>
+      <Entry>String</Entry>
+      <Entry>java.lang.String</Entry>
+      <Entry>pass.UnaryPlus</Entry>
+    </Entries>
+  </CompilationUnitContext>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="UnaryPlus" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="unaryPlus" returnType="int">
+        <MethodContext>
+          <LocalContext>
+            <Entries>
+              <Entry name="x" offset="1"/>
+            </Entries>
+          </LocalContext>
+        </MethodContext>
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="x" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <LocalContext>
+              <Entries>
+              </Entries>
+            </LocalContext>
+            <JReturnStatement line="6">
+              <JUnaryExpression line="6" type="int" operator="+">
+                <Operand>
+                  <JVariable name="x"/>
+                </Operand>
+              </JUnaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+And building the project shows that codegen works:
+
+ [junit] Testcase: testPass took 0.907 sec
+    [junit] Testcase: testFail took 0.306 sec
+    [junit] Running junit.JMinusMinusTestRunner
+    [junit] Testsuite: junit.JMinusMinusTestRunner
+    [junit] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, 
+Time elapsed: 0.039 sec
+    [junit] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, 
+Time elapsed: 0.039 sec
+    [junit]
+    [junit] Testcase: testMessage took 0.005 sec
+    [junit] Testcase: testFactorial took 0.003 sec
+    [junit] Testcase: testCompute took 0.002 sec
+    [junit] Testcase: testComputeSum took 0.003 sec
+    [junit] Testcase: testMessage took 0.006 sec
+    [junit] Testcase: testDivide took 0.002 sec
+    [junit] Testcase: testModulo took 0.002 sec
+    [junit] Testcase: testUnaryPlus took 0.002 sec
+
+BUILD SUCCESSFUL
+Total time: 3 seconds
+
+Question 6 (Extra Credit))
+
+First a pass test was created that was peforemd in the style of the division
+test, with the bitwise &, |, and ^.
+
+Initially it had the following compile errors:
+
+C:\Users\bwils_000\Desktop\eclipse projects\j-->bin\j-- tests\pass
+\IntBitwise.java
+tests\pass\IntBitwise.java:5: Operator & is not supported in j--.
+tests\pass\IntBitwise.java:5: y found where ; sought
+tests\pass\IntBitwise.java:5: Invalid statement expression; it does not have a
+side-effect
+tests\pass\IntBitwise.java:8: Unidentified input token: '|'
+tests\pass\IntBitwise.java:8: y found where ; sought
+tests\pass\IntBitwise.java:8: Invalid statement expression; it does not have a 
+side-effect
+tests\pass\IntBitwise.java:11: Unidentified input token: '^'
+tests\pass\IntBitwise.java:11: y found where ; sought
+tests\pass\IntBitwise.java:11: Invalid statement expression; it does not have 
+a side-effect 
+
+Once the appropriate characters were added to scanner, -t showed the following
+for the pass test:
+
+1	 : package = package
+1	 : <IDENTIFIER> = pass
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = IntBitwise
+3	 : { = {
+4	 : public = public
+4	 : int = int
+4	 : <IDENTIFIER> = andBitwise
+4	 : ( = (
+4	 : int = int
+4	 : <IDENTIFIER> = x
+4	 : , = ,
+4	 : int = int
+4	 : <IDENTIFIER> = y
+4	 : ) = )
+4	 : { = {
+5	 : return = return
+5	 : <IDENTIFIER> = x
+5	 : & = &
+5	 : <IDENTIFIER> = y
+5	 : ; = ;
+6	 : } = }
+7	 : public = public
+7	 : int = int
+7	 : <IDENTIFIER> = orBitwise
+7	 : ( = (
+7	 : int = int
+7	 : <IDENTIFIER> = x
+7	 : , = ,
+7	 : int = int
+7	 : <IDENTIFIER> = y
+7	 : ) = )
+7	 : { = {
+8	 : return = return
+8	 : <IDENTIFIER> = x
+8	 : | = |
+8	 : <IDENTIFIER> = y
+8	 : ; = ;
+9	 : } = }
+10	 : public = public
+10	 : int = int
+10	 : <IDENTIFIER> = xorBitwise
+10	 : ( = (
+10	 : int = int
+10	 : <IDENTIFIER> = x
+10	 : , = ,
+10	 : int = int
+10	 : <IDENTIFIER> = y
+10	 : ) = )
+10	 : { = {
+11	 : return = return
+11	 : <IDENTIFIER> = x
+11	 : ^ = ^
+11	 : <IDENTIFIER> = y
+11	 : ; = ;
+12	 : } = }
+13	 : } = }
+13	 : <EOF> = <EOF>
+
+In order to make  the appropriate changes to the parser, it is
+necessary to you need to add in new objects to JBinnaryExpression and
+multiplicativeExpression in Parser.java.  The result of running the pass test
+with the -p option is as follows:
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/IntBitwise.java"/>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="IntBitwise" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="andBitwise" returnType="int">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="x" type="int"/>
+          <JFormalParameter line="4" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JReturnStatement line="5">
+              <JBinaryExpression line="5" type="" operator="&amp;">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="7" name="orBitwise" returnType="int">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="7" name="x" type="int"/>
+          <JFormalParameter line="7" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="7">
+            <JReturnStatement line="8">
+              <JBinaryExpression line="8" type="" operator="|">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="10" name="xorBitwise" returnType="int">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="10" name="x" type="int"/>
+          <JFormalParameter line="10" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="10">
+            <JReturnStatement line="11">
+              <JBinaryExpression line="11" type="" operator="^">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+The code from analyze code for JDivideOp can rececyled for the bitwise
+analysis.  The test produces as follows:
+
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/pass/IntBitwise.java"/>
+  <CompilationUnitContext>
+    <Entries>
+      <Entry>IntBitwise</Entry>
+      <Entry>pass.IntBitwise</Entry>
+      <Entry>Object</Entry>
+      <Entry>java.lang.Object</Entry>
+      <Entry>String</Entry>
+      <Entry>java.lang.String</Entry>
+    </Entries>
+  </CompilationUnitContext>
+  <Package name="pass"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="IntBitwise" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="andBitwise" returnType="int">
+        <MethodContext>
+          <LocalContext>
+            <Entries>
+              <Entry name="x" offset="1"/>
+              <Entry name="y" offset="2"/>
+            </Entries>
+          </LocalContext>
+        </MethodContext>
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="x" type="int"/>
+          <JFormalParameter line="4" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <LocalContext>
+              <Entries>
+              </Entries>
+            </LocalContext>
+            <JReturnStatement line="5">
+              <JBinaryExpression line="5" type="int" operator="&amp;">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="7" name="orBitwise" returnType="int">
+        <MethodContext>
+          <LocalContext>
+            <Entries>
+              <Entry name="x" offset="1"/>
+              <Entry name="y" offset="2"/>
+            </Entries>
+          </LocalContext>
+        </MethodContext>
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="7" name="x" type="int"/>
+          <JFormalParameter line="7" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="7">
+            <LocalContext>
+              <Entries>
+              </Entries>
+            </LocalContext>
+            <JReturnStatement line="8">
+              <JBinaryExpression line="8" type="int" operator="|">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="10" name="xorBitwise" returnType="int">
+        <MethodContext>
+          <LocalContext>
+            <Entries>
+              <Entry name="x" offset="1"/>
+              <Entry name="y" offset="2"/>
+            </Entries>
+          </LocalContext>
+        </MethodContext>
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="10" name="x" type="int"/>
+          <JFormalParameter line="10" name="y" type="int"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="10">
+            <LocalContext>
+              <Entries>
+              </Entries>
+            </LocalContext>
+            <JReturnStatement line="11">
+              <JBinaryExpression line="11" type="int" operator="^">
+                <Lhs>
+                  <JVariable name="x"/>
+                </Lhs>
+                <Rhs>
+                  <JVariable name="y"/>
+                </Rhs>
+              </JBinaryExpression>
+            </JReturnStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Finally iand, ior, and ixor, were added to added to codegen and tested using
+testIntBitwise.
+
+[junit] Testcase: testFail took 0.072 sec
+       [junit] Testcase: testPass took 0.061 sec
+       [javac] Compiling 1 source file to C:\Users\bwils_000\Desktop
+\eclipse projects\j--\classes
+       [junit] Running junit.JMinusMinusTestRunner
+       [junit] Testsuite: junit.JMinusMinusTestRunner
+       [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, 
+Time elapsed: 0.005 sec
+       [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, 
+Time elapsed: 0.005 sec
+       [junit] Testcase: testMessage took 0.001 sec
+       [junit] Testcase: testFactorial took 0 sec
+       [junit] Testcase: testCompute took 0.001 sec
+       [junit] Testcase: testComputeSum took 0.001 sec
+       [junit] Testcase: testMessage took 0.001 sec
+       [junit] Testcase: testDivide took 0 sec
+       [junit] Testcase: testModulo took 0 sec
+       [junit] Testcase: testUnaryPlus took 0.001 sec
+       [junit] Testcase: testIntBitwise took 0 sec
+BUILD SUCCESSFUL
+Total time: 1 second
+
+
+FINAL NOTES:
+
+Finally here are the results of the of building the file and running
+testScanner, testParser, and testAnalyzer on the program.  The results were
+produced much more slowly than on my computer.  For example, the first build
+took 5 minutes and 20 seconds.
+
+Last login: Mon Sep 12 09:14:22 2016 from c-24-61-190-108.hsd1.ma.comcast.net
+rwilson@vm71:~$ cd cs451/hw1/j--
+rwilson@vm71:~/cs451/hw1/j--$ ant clean
+Buildfile: /courses/cs451/f16/wrc/rwilson/hw1/j--/build.xml
+
+clean:
+     [echo] Removing generated files and folders...
+   [delete] Deleting: /courses/cs451/f16/wrc/rwilson/hw1/j--/lib/j--.jar
+   [delete] Deleting: /courses/cs451/f16/wrc/rwilson/hw1/j--/lib/spim.jar
+   [delete] Deleting directory /courses/cs451/f16/wrc/rwilson/hw1/j--/classes
+
+BUILD SUCCESSFUL
+Total time: 2 seconds
+rwilson@vm71:~/cs451/hw1/j--$ ant
+Buildfile: /courses/cs451/f16/wrc/rwilson/hw1/j--/build.xml
+
+compile:
+     [echo] Compiling j-- source files...
+    [mkdir] Created dir: /courses/cs451/f16/wrc/rwilson/hw1/j--/classes
+    [javac] Compiling 77 source files to /courses/cs451/f16/wrc/rwilson/hw1/j--/classes
+
+compileSPIM:
+     [echo] Compiling j-- source files...
+    [javac] Compiling 1 source file to /courses/cs451/f16/wrc/rwilson/hw1/j--/classes
+
+jar:
+     [echo] Bundling class files into jar files...
+      [jar] Building jar: /courses/cs451/f16/wrc/rwilson/hw1/j--/lib/j--.jar
+      [jar] Building jar: /courses/cs451/f16/wrc/rwilson/hw1/j--/lib/spim.jar
+
+runCompilerTests:
+     [echo] Compiling and running j-- (JVM) programs...
+    [javac] Compiling 1 source file to /courses/cs451/f16/wrc/rwilson/hw1/j--/classes
+    [junit] Running junit.JMinusMinusTest
+    [junit] Testsuite: junit.JMinusMinusTest
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Animalia.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Arrays.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Classes.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Division.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Factorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/GCD.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/HelloWorld.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Inits.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/IntBitwise.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/IntFactorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Kast.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Modulo.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Series.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Strings.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/UnaryPlus.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Division.java ...
+    [junit] 
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Division.java:5: Type char doesn't match type int
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java ...
+    [junit] 
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:11: Unidentified input token: '#'
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:11: . found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:11: Type sought where . found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: ( found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: Type sought where ( found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: [ found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: Type sought where [ found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: ) found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: Type sought where ) found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: . found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: Type sought where . found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: . found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: Type sought where . found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: ( found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: Type sought where ( found
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Modulo.java ...
+    [junit] 
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Modulo.java:5: Type char doesn't match type int
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java ...
+    [junit] 
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java:14: Literal sought where int found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java:14: { found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java:15: Literal sought where = found
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/TypeErrors.java ...
+    [junit] 
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/TypeErrors.java:14: Type int doesn't match type boolean
+    [junit] 
+    [junit] 
+    [junit] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.049 sec
+    [junit] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.049 sec
+    [junit] ------------- Standard Output ---------------
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Animalia.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Arrays.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Classes.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Division.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Factorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/GCD.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/HelloWorld.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Inits.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/IntBitwise.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/IntFactorial.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Kast.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Modulo.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Series.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/Strings.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/pass/UnaryPlus.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Division.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Modulo.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] Running j-- (with handwritten frontend) on /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/TypeErrors.java ...
+    [junit] 
+    [junit] 
+    [junit] 
+    [junit] ------------- ---------------- ---------------
+    [junit] ------------- Standard Error -----------------
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Division.java:5: Type char doesn't match type int
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:11: Unidentified input token: '#'
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:11: . found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:11: Type sought where . found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: ( found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: Type sought where ( found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: [ found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: Type sought where [ found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: ) found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:12: Type sought where ) found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: . found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: Type sought where . found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: . found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: Type sought where . found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: ( found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/LexicalErrors.java:13: Type sought where ( found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/Modulo.java:5: Type char doesn't match type int
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java:14: Literal sought where int found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java:14: { found where ; sought
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/SyntaxErrors.java:15: Literal sought where = found
+    [junit] /courses/cs451/f16/wrc/rwilson/hw1/j--/tests/fail/TypeErrors.java:14: Type int doesn't match type boolean
+    [junit] ------------- ---------------- ---------------
+    [junit] 
+    [junit] Testcase: testPass took 0.856 sec
+    [junit] Testcase: testFail took 0.178 sec
+    [javac] Compiling 14 source files to /courses/cs451/f16/wrc/rwilson/hw1/j--/classes
+    [junit] Running junit.JMinusMinusTestRunner
+    [junit] Testsuite: junit.JMinusMinusTestRunner
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.06 sec
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.06 sec
+    [junit] 
+    [junit] Testcase: testMessage took 0.005 sec
+    [junit] Testcase: testFactorial took 0.004 sec
+    [junit] Testcase: testCompute took 0.003 sec
+    [junit] Testcase: testComputeSum took 0.004 sec
+    [junit] Testcase: testMessage took 0.014 sec
+    [junit] Testcase: testDivide took 0.003 sec
+    [junit] Testcase: testModulo took 0.003 sec
+    [junit] Testcase: testUnaryPlus took 0.005 sec
+    [junit] Testcase: testIntBitwise took 0.003 sec
+
+BUILD SUCCESSFUL
+Total time: 5 minutes 20 seconds
+rwilson@vm71:~/cs451/hw1/j--$ 
+
+
+The other tests are located in test1.txt, test2.txt, and test3.txt.

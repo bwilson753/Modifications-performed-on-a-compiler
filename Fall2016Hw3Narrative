@@ -1,0 +1,4131 @@
+Robert Wilson
+HW3 Narrative
+CS451
+
+Prior to performing the exercises, it makes sense to comment out the main
+method body of literals so that the build output is not so long.
+
+Question 1)
+
+Within parser, in accordance with Appendix C, two places need to be modified:
+
+basicType ::= boolean j byte j char j short j int j float j long j double
+
+literal ::= <int_literal> j <char_literal> j <string_literal> j <float_literal>
+j <long_literal> j <double_literal> j true j false j null
+
+    private Type basicType() {
+        if (have(BOOLEAN)) {
+            return Type.BOOLEAN;
+        } else if (have(CHAR)) {
+            return Type.CHAR;
+        } else if (have(INT)) {
+            return Type.INT;
+        } else {
+            reportParserError("Type sought where %s found", scanner.token()
+                    .image());
+            return Type.ANY;
+        }
+    }
+
+    private boolean seeBasicType() {
+        if (see(BOOLEAN) || see(CHAR) || see(INT)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private boolean seeReferenceType() {
+        if (see(IDENTIFIER)) {
+            return true;
+        } else {
+            scanner.recordPosition();
+            if (have(BOOLEAN) || have(CHAR) || have(INT)) {
+                if (have(LBRACK) && see(RBRACK)) {
+                    scanner.returnToPosition();
+                    return true;
+                }
+            }
+            scanner.returnToPosition();
+        }
+        return false;
+    }
+
+literal ::= <int_literal> j <char_literal> j <string_literal> j <float_literal>
+j <long_literal> j <double_literal> j true j false j null
+
+    private JExpression literal() {
+        int line = scanner.token().line();
+        if (have(INT_LITERAL)) {
+            return new JLiteralInt(line, scanner.previousToken().image());
+        } else if (have(CHAR_LITERAL)) {
+            return new JLiteralChar(line, scanner.previousToken().image());
+        } else if (have(STRING_LITERAL)) {
+            return new JLiteralString(line, scanner.previousToken().image());
+        } else if (have(TRUE)) {
+            return new JLiteralTrue(line);
+        } else if (have(FALSE)) {
+            return new JLiteralFalse(line);
+        } else if (have(NULL)) {
+            return new JLiteralNull(line);
+        } else {
+            reportParserError("Literal sought where %s found", scanner.token()
+                    .image());
+            return new JWildExpression(line);
+        }
+    }
+
+But before modifications to these are made, first a test should be created:
+
+package fail;
+
+public class LongParser {
+	long a = 34L;
+	long b = 8l;
+	int c = 5;
+	long d = (long) c;
+	dflksjd || //makes the compiler happy
+}
+
+Next, a new class needs to be created called JLiteralLong modeled off of
+JLiteralInt.  Then changes could be made grammar for literal an basicType.
+After that, changes need to be made to Type so that Long is recognized. 
+Finally modifcation need to be made to the above referenced methods.  The
+results of the the LongParser test with -p option are as follows:
+
+tests/fail/LongParser.java:8: || found where <IDENTIFIER> sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/LongParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="LongParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JFieldDeclaration line="4"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="4" name="a" type="long">
+            <Initializer>
+              <JLiteralLong line="4" type="" value="34L"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JFieldDeclaration line="5"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="5" name="b" type="long">
+            <Initializer>
+              <JLiteralLong line="5" type="" value="8l"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JFieldDeclaration line="6"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="6" name="c" type="int">
+            <Initializer>
+              <JLiteralInt line="6" type="" value="5"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JFieldDeclaration line="7"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="7" name="d" type="long">
+            <Initializer>
+              <JCastOp line="7" type="long"/>
+                <Expression>
+                  <JVariable name="c"/>
+                </Expression>
+              </JCastOp>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JFieldDeclaration line="8"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="8" name="dflksjd" type="dflksjd">
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Question 2)
+
+On page 311, it can be seen that it falls between after logical Or and before
+assignment in terms of operator precedence.
+
+The first thing that needs to be done is a test has to be created.
+
+package fail;
+
+public class ConditionalExpressionParser {
+	public static void main(String[] args){
+		int a = true ? 1 : 2;
+		int b = (1 > 2) ? 3 : 4;
+	}
+}
+
+The next thing that needs to be done is the creation of the new class
+JConditionalExpression.java.  This can be modeled off of JIfStatement.java and
+JExpression.java.  The main difference between JIfStament and
+JConditionalExpression is all instances of JStatement are replaced with
+JExpression.
+
+After this, there needs to be some modifcations to TokenKind and Scanner so
+that it can recognize ":".  Thw -t option of the above test is as follows,
+
+1	 : package = package
+1	 : <IDENTIFIER> = fail
+1	 : ; = ;
+3	 : public = public
+3	 : class = class
+3	 : <IDENTIFIER> = ConditionalExpressionParser
+3	 : { = {
+4	 : public = public
+4	 : static = static
+4	 : void = void
+4	 : <IDENTIFIER> = main
+4	 : ( = (
+4	 : <IDENTIFIER> = String
+4	 : [ = [
+4	 : ] = ]
+4	 : <IDENTIFIER> = args
+4	 : ) = )
+4	 : { = {
+5	 : int = int
+5	 : <IDENTIFIER> = a
+5	 : = = =
+5	 : true = true
+5	 : ? = ?
+5	 : <INT_LITERAL> = 1
+5	 : : = :
+5	 : <INT_LITERAL> = 2
+5	 : ; = ;
+6	 : int = int
+6	 : <IDENTIFIER> = b
+6	 : = = =
+6	 : ( = (
+6	 : <INT_LITERAL> = 1
+6	 : > = >
+6	 : <INT_LITERAL> = 2
+6	 : ) = )
+6	 : ? = ?
+6	 : <INT_LITERAL> = 3
+6	 : : = :
+6	 : <INT_LITERAL> = 4
+6	 : ; = ;
+7	 : } = }
+8	 : } = }
+8	 : <EOF> = <EOF>
+
+Once this has been completed Parser is modified in the area referenced above
+based on Appendix C of the book:
+
+private JExpression assignmentExpression() {
+        int line = scanner.token().line();
+        JExpression lhs = conditionalExpression();//conditionalAndExpression();
+        if (have(ASSIGN)) {
+            return new JAssignOp(line, lhs, assignmentExpression());
+        } else if (have(PLUS_ASSIGN)) {
+            return new JPlusAssignOp(line, lhs, assignmentExpression());
+        } else {
+            return lhs;
+        }
+    }
+
+The following -p option is then performed on the test above:
+
+tests/fail/ConditionalExpressionParser.java:9: } found where <IDENTIFIER> sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/ConditionalExpressionParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="ConditionalExpressionParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="5" name="a" type="int">
+                  <Initializer>
+                    <JConditionalExpression line="5">
+                      <TestExpression>
+                        <JLiteralTrue line="5" type=""/>
+                      </TestExpression>
+                      <ThenClause>
+                        <JLiteralInt line="5" type="" value="1"/>
+                      </ThenClause>
+                      <ElseClause>
+                        <JLiteralInt line="5" type="" value="2"/>
+                      </ElseClause>
+                    </JIfStatement>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="6" name="b" type="int">
+                  <Initializer>
+                    <JConditionalExpression line="6">
+                      <TestExpression>
+                        <JBinaryExpression line="6" type="" operator="&gt;">
+                          <Lhs>
+                            <JLiteralInt line="6" type="" value="1"/>
+                          </Lhs>
+                          <Rhs>
+                            <JLiteralInt line="6" type="" value="2"/>
+                          </Rhs>
+                        </JBinaryExpression>
+                      </TestExpression>
+                      <ThenClause>
+                        <JLiteralInt line="6" type="" value="3"/>
+                      </ThenClause>
+                      <ElseClause>
+                        <JLiteralInt line="6" type="" value="4"/>
+                      </ElseClause>
+                    </JIfStatement>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JFieldDeclaration line="8"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="9" name="dlfjljdlf" type="dlfjljdlf">
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Question 3)
+
+The logical or, prefix --, and postfix ++ need to be added among the operator
+hierarchy in a manner that is similar to the conditional expression.  Logical
+or needs to be added after & & and before the conditional expresssion
+(which means a modification will need to be made the conditional expression
+method).  Prefix comes second before the top of the hierarchy and postfix comes
+at the top of the hierarchy.  However, before any of this is performed first a
+test should be created:
+
+package fail;
+
+public class OrPrePostParser {
+	public static void main(String[] args){
+		boolean a = true || false;
+		int b = 3;
+		b++;
+		b--;
+		--b;
+		++b;
+	}
+	jkldfj//make compiler happy
+}
+
+Next, a new class needs to be created called JLogicalOrOp that can be modeled
+off of JLogicalAndop found in JBooleanBinaryExpression, then an
+conditionalOrExpression() method should be added to parser which will now be
+called by the conditionalExpression() method:
+
+    private JExpression conditionalOrExpression() {
+        int line = scanner.token().line();
+        boolean more = true;
+        JExpression lhs = conditionalAndExpression();
+        while (more) {
+            if (have(LOR)) {
+                lhs = new JLogicalOrOp(line, lhs, conditionalAndExpression());
+            } else {
+                more = false;
+            }
+        }
+        return lhs;
+    }
+
+For the prefix --, first a new JPreDecrementOp needs to be added to
+JUnaryExpression.  It can be modeled after JPreIncrementOp.  Then modifications
+need to made to statementExpression and unaryExpression:
+
+	private JStatement statementExpression() {
+        int line = scanner.token().line();
+        JExpression expr = expression();
+        if (expr instanceof JAssignment || expr instanceof JPreIncrementOp
+        		|| expr instanceof JPreDecrementOp //added
+                || expr instanceof JPostDecrementOp
+                || expr instanceof JMessageExpression
+                || expr instanceof JSuperConstruction
+                || expr instanceof JThisConstruction || expr instanceof JNewOp
+                || expr instanceof JNewArrayOp) {
+            // So as not to save on stack
+            expr.isStatementExpression = true;
+        } else {
+            reportParserError("Invalid statement expression; "
+                    + "it does not have a side-effect");
+        }
+        return new JStatementExpression(line, expr);
+    }
+
+And,
+
+    private JExpression unaryExpression() {
+        int line = scanner.token().line();
+        if (have(INC)) {
+            return new JPreIncrementOp(line, unaryExpression());
+        } else if (have(DEC)) {//Added
+            return new JPreDecrementOp(line, unaryExpression());
+        } else if (have(MINUS)) {
+            return new JNegateOp(line, unaryExpression());
+        } else if (have(PLUS)) {//added for Unary plus
+            return new JNoNegateOp(line, unaryExpression());
+        } else {
+            return simpleUnaryExpression();
+        }
+    }
+
+Adding post ++ works in a similar fashion.  Add JPostIncremntOp to
+JUnaryExpression modeled after JPostDecrementOp.  Then make the appropriate
+modifications to Parser:
+
+	private JExpression postfixExpression() {
+        int line = scanner.token().line();
+        JExpression primaryExpr = primary();
+        while (see(DOT) || see(LBRACK)) {
+            primaryExpr = selector(primaryExpr);
+        }
+        while (have(DEC)) {
+            primaryExpr = new JPostDecrementOp(line, primaryExpr);
+        }
+        while (have(INC)) {
+            primaryExpr = new JPostIncrementOp(line, primaryExpr);
+        }
+        return primaryExpr;
+    }
+
+And,
+
+    private JStatement statementExpression() {
+        int line = scanner.token().line();
+        JExpression expr = expression();
+        if (expr instanceof JAssignment || expr instanceof JPreIncrementOp
+        		|| expr instanceof JPreDecrementOp //added
+        		|| expr instanceof JPostIncrementOp //added
+                || expr instanceof JPostDecrementOp
+                || expr instanceof JMessageExpression
+                || expr instanceof JSuperConstruction
+                || expr instanceof JThisConstruction || expr instanceof JNewOp
+                || expr instanceof JNewArrayOp) {
+            // So as not to save on stack
+            expr.isStatementExpression = true;
+        } else {
+            reportParserError("Invalid statement expression; "
+                    + "it does not have a side-effect");
+        }
+        return new JStatementExpression(line, expr);
+    }
+
+The results of the test referenced above are as follows:
+
+tests/fail/OrPrePostParser.java:13: } found where <IDENTIFIER> sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/OrPrePostParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="OrPrePostParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="5" name="a" type="boolean">
+                  <Initializer>
+                    <JBinaryExpression line="5" type="" operator="||">
+                      <Lhs>
+                        <JLiteralTrue line="5" type=""/>
+                      </Lhs>
+                      <Rhs>
+                        <JLiteralFalse line="5" type=""/>
+                      </Rhs>
+                    </JBinaryExpression>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="6" name="b" type="int">
+                  <Initializer>
+                    <JLiteralInt line="6" type="" value="3"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JStatementExpression line="7">
+              <JUnaryExpression line="7" type="" operator="post++">
+                <Operand>
+                  <JVariable name="b"/>
+                </Operand>
+              </JUnaryExpression>
+            </JStatementExpression>
+            <JStatementExpression line="8">
+              <JUnaryExpression line="8" type="" operator="post--">
+                <Operand>
+                  <JVariable name="b"/>
+                </Operand>
+              </JUnaryExpression>
+            </JStatementExpression>
+            <JStatementExpression line="9">
+              <JUnaryExpression line="9" type="" operator="--pre">
+                <Operand>
+                  <JVariable name="b"/>
+                </Operand>
+              </JUnaryExpression>
+            </JStatementExpression>
+            <JStatementExpression line="10">
+              <JUnaryExpression line="10" type="" operator="++pre">
+                <Operand>
+                  <JVariable name="b"/>
+                </Operand>
+              </JUnaryExpression>
+            </JStatementExpression>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JFieldDeclaration line="12"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="13" name="jkldfj" type="jkldfj">
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+Finally, the appropriate changes must be made to grammar.
+
+Question 4)
+
+Based on Appendix C, parser decides whether it is parsing a class declaration
+or an interface declaration when it is determining type declaration,
+
+typeDeclaration ::= typeDeclarationModiers (classDeclaration j interfaceDeclaration)
+j ;
+
+or in Parser,
+
+    private JAST typeDeclaration() {
+        ArrayList<String> mods = modifiers();
+        return classDeclaration(mods);
+    }
+
+if it is an interface then it returns an inteface declaration method with a
+mods argument.  However, the interfaceDeclaration method needs to have a new
+JInterfaceDeclarartion object to return.  But before that, a test should be
+created.
+
+But prior to making any other modifications, it first makes sense to write some
+tests.  The first should be a regular interface.  The second should be an
+interface that extends other interfaces, and the third should be a class that
+implements multiple interfaces:
+
+package fail;
+
+public interface InterfaceParser {
+	public void foo();
+	
+}jdfljadl//keep compiler happy
+
+And,
+
+package fail;
+
+public interface InterfaceWithMulExts extends ga, sna, buh{
+	public void foo();
+	
+}jdfljadl//keep compiler happy
+
+And,
+
+package fail;
+
+public class ClassWithMulInterfs implements ga, sna, buh{
+	public void foo();
+	
+}jdfljadl//keep compiler happy
+
+Next, it makes sense to make some changes to grammar,
+
+typeDeclaration ::= modifiers (classDeclaration | interfaceDeclaration)
+
+modifiers ::= {PUBLIC | PROTECTED | PRIVATE | STATIC | ABSTRACT}
+
+classDeclaration ::= CLASS IDENTIFIER 
+                       [EXTENDS qualifiedIdentifier] 
+                       classBody
+                       
+interfaceDeclaration ::= INTERFACE IDENTIFIER // can't be final
+			[EXTENDS qualifiedIdentifier {, qualifiedIdentifier}]				interfaceBody
+
+classBody ::= LCURLY {modifiers memberDecl} RCURLY
+
+interfaceBody ::= LCURLY {modifiers interfaceMemberDecl} RCURLY
+
+memberDecl ::= IDENTIFIER            // constructor
+                 formalParameters block
+             | (VOID | type) IDENTIFIER  // method
+                 formalParameters
+                 (block | SEMI)
+             | type variableDeclarators SEMI // field
+
+interfaceMemberDecl ::= (VOID | type) IDENTIFIER  // method
+                 formalParameters
+                 (block | SEMI)
+             | type variableDeclarators SEMI // field
+
+Note that there is an intefaceMemberDecl which is slightly diffferent then
+meberDecl because it does not consider constructors,
+
+Next there needs to be a creation of JInterfaceDeclaration based on
+JClassDeclaration and then the modifications to parser need to be made based on
+the changes to grammar referenced above.
+
+    private JAST typeDeclaration() {
+        ArrayList<String> mods = modifiers();
+        if (see(INTERFACE)){
+         //System.out.println("INTERFACE");
+         return interfaceDeclaration(mods);
+        } else {
+         return classDeclaration(mods);
+        }
+    }
+
+And,
+
+    private JClassDeclaration classDeclaration(ArrayList<String> mods) {
+        int line = scanner.token().line();
+        mustBe(CLASS);
+        mustBe(IDENTIFIER);
+        String name = scanner.previousToken().image();
+        Type superClass;
+        //use this for implements
+        ArrayList<jminusminus.Type> supers = new ArrayList<Type>();
+        if (have(EXTENDS)) {
+            superClass = qualifiedIdentifier();
+        } else {
+            superClass = Type.OBJECT;
+        } if (have(IMPLEMENTS)) {
+            supers.add(qualifiedIdentifier());
+            //System.out.println(supers.get(0));
+            while (have(COMMA)) {
+             supers.add(qualifiedIdentifier());
+            }
+        } 
+        return new JClassDeclaration(line, mods, name, superClass, classBody(), supers);
+    }
+    
+    //interface declaration
+    private JInterfaceDeclaration interfaceDeclaration(ArrayList<String> mods) {
+        int line = scanner.token().line();
+        mustBe(INTERFACE);
+        mustBe(IDENTIFIER);
+        String name = scanner.previousToken().image();
+        Type superClass;
+        ArrayList<jminusminus.Type> supers = new ArrayList<Type>();
+        if (have(EXTENDS)) {
+            supers.add(qualifiedIdentifier());
+            //System.out.println(supers.get(0));
+            while (have(COMMA)) {
+             supers.add(qualifiedIdentifier());
+            }
+        } 
+//        else {
+//            superClass = null;//Type.OBJECT;
+//        }
+        return new JInterfaceDeclaration(line, mods, name, supers, interfaceBody());
+    }
+
+Note that this requires some modifications of JClassDeclaration.
+
+And,
+
+    private ArrayList<JMember> interfaceBody() {
+        ArrayList<JMember> members = new ArrayList<JMember>();
+        mustBe(LCURLY);
+        while (!see(RCURLY) && !see(EOF)) {
+            members.add(interfaceMemberDecl(modifiers()));
+        }
+        mustBe(RCURLY);
+        return members;
+    }
+
+And,
+
+    private JMember interfaceMemberDecl(ArrayList<String> mods) {
+        int line = scanner.token().line();
+        JMember memberDecl = null;
+            Type type = null;
+            if (have(VOID)) {
+                // void method
+                type = Type.VOID;
+                mustBe(IDENTIFIER);
+                String name = scanner.previousToken().image();
+                ArrayList<JFormalParameter> params = formalParameters();
+                JBlock body = have(SEMI) ? null : block();
+                memberDecl = new JMethodDeclaration(line, mods, name, type,
+                        params, body);
+            } else {
+                type = type();
+                if (seeIdentLParen()) {
+                    // Non void method
+                    mustBe(IDENTIFIER);
+                    String name = scanner.previousToken().image();
+                    ArrayList<JFormalParameter> params = formalParameters();
+                    JBlock body = have(SEMI) ? null : block();
+                    memberDecl = new JMethodDeclaration(line, mods, name, type,
+                            params, body);
+                } 
+            }
+        return memberDecl;
+    }
+
+Here are the results of the above referenced tests,
+
+tests/fail/InterfaceWithMulExts.java:6: jdfljadl found where class sought
+tests/fail/InterfaceWithMulExts.java:6: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/InterfaceWithMulExts.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="3" name="InterfaceWithMulExts" super="    ga    sna    buh     ">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+    <JClassDeclaration line="6" name="jdfljadl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+And,
+
+tests/fail/InterfaceParser.java:6: jdfljadl found where class sought
+tests/fail/InterfaceParser.java:6: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/InterfaceParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="3" name="InterfaceParser" super="null">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+    <JClassDeclaration line="6" name="jdfljadl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+And,
+
+tests/fail/ClassWithMulInterfs.java:6: jdfljadl found where class sought
+tests/fail/ClassWithMulInterfs.java:6: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/ClassWithMulInterfs.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="ClassWithMulInterfs" super="java.lang.Object" implements="    ga    sna    buh     ">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="6" name="jdfljadl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+A modification also needs to be made.  Interface didn't support the keyword 
+final or field declarations.  So the following two modifications were made
+along with the subsequent tests and results.
+
+    private ArrayList<String> modifiers() {
+        ArrayList<String> mods = new ArrayList<String>();
+        boolean scannedPUBLIC = false;
+        boolean scannedPROTECTED = false;
+        boolean scannedPRIVATE = false;
+        boolean scannedSTATIC = false;
+        boolean scannedABSTRACT = false;
+        boolean scannedFINAL = false;
+        boolean more = true;
+        while (more)
+            if (have(PUBLIC)) {
+                mods.add("public");
+                if (scannedPUBLIC) {
+                    reportParserError("Repeated modifier: public");
+                }
+                if (scannedPROTECTED || scannedPRIVATE) {
+                    reportParserError("Access conflict in modifiers");
+                }
+                scannedPUBLIC = true;
+            } else if (have(PROTECTED)) {
+                mods.add("protected");
+                if (scannedPROTECTED) {
+                    reportParserError("Repeated modifier: protected");
+                }
+                if (scannedPUBLIC || scannedPRIVATE) {
+                    reportParserError("Access conflict in modifiers");
+                }
+                scannedPROTECTED = true;
+            } else if (have(PRIVATE)) {
+                mods.add("private");
+                if (scannedPRIVATE) {
+                    reportParserError("Repeated modifier: private");
+                }
+                if (scannedPUBLIC || scannedPROTECTED) {
+                    reportParserError("Access conflict in modifiers");
+                }
+                scannedPRIVATE = true;
+            } else if (have(STATIC)) {
+                mods.add("static");
+                if (scannedSTATIC) {
+                    reportParserError("Repeated modifier: static");
+                }
+                scannedSTATIC = true;
+            } else if (have(ABSTRACT)) {
+                mods.add("abstract");
+                if (scannedABSTRACT) {
+                    reportParserError("Repeated modifier: abstract");
+                }
+                scannedABSTRACT = true;
+            } else if (have(FINAL)) {
+                mods.add("final");
+                if (scannedFINAL) {
+                    reportParserError("Repeated modifier: final");
+                }
+                scannedFINAL = true;
+            } else {
+                more = false;
+            }
+        return mods;
+    }
+
+   private JMember interfaceMemberDecl(ArrayList<String> mods) {
+        int line = scanner.token().line();
+        JMember memberDecl = null;
+            Type type = null;
+            if (have(VOID)) {
+                // void method
+                type = Type.VOID;
+                mustBe(IDENTIFIER);
+                String name = scanner.previousToken().image();
+                ArrayList<JFormalParameter> params = formalParameters();
+                ArrayList<jminusminus.Type> excepts = new ArrayList<jminusminus.Type>();
+                if (have(THROWS)) {
+                    excepts.add(qualifiedIdentifier());
+                    while (have(COMMA)) {
+                     excepts.add(qualifiedIdentifier());
+                    }
+                }
+                JBlock body = have(SEMI) ? null : block();
+                memberDecl = new JMethodDeclaration(line, mods, name, type,
+                        params, body, excepts);
+            } else {
+                type = type();
+                if (seeIdentLParen()) {
+                    // Non void method
+                    mustBe(IDENTIFIER);
+                    String name = scanner.previousToken().image();
+                    ArrayList<JFormalParameter> params = formalParameters();
+                    ArrayList<jminusminus.Type> excepts = new ArrayList<jminusminus.Type>();
+                    if (have(THROWS)) {
+                        excepts.add(qualifiedIdentifier());
+                        while (have(COMMA)) {
+                         excepts.add(qualifiedIdentifier());
+                        }
+                    }
+                    JBlock body = have(SEMI) ? null : block();
+                    memberDecl = new JMethodDeclaration(line, mods, name, type,
+                            params, body, excepts);
+                } else {
+                    // Field
+                    memberDecl = new JFieldDeclaration(line, mods,
+                            variableDeclarators(type));
+                    mustBe(SEMI);
+                }
+            }
+        return memberDecl;
+    }
+
+package fail;
+
+public interface InterfaceParser {
+	
+	final int i = 0;
+	
+	public void foo();
+	
+	
+	
+}jdfljadl//keep compiler happy
+
+tests/fail/InterfaceParser.java:11: jdfljadl found where class sought
+tests/fail/InterfaceParser.java:11: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/InterfaceParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="3" name="InterfaceParser" super="null">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JFieldDeclaration line="5"/>
+        <Modifiers>
+          <Modifier name="final"/>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="5" name="i" type="int">
+            <Initializer>
+              <JLiteralInt line="5" type="" value="0"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JMethodDeclaration line="7" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+    <JClassDeclaration line="11" name="jdfljadl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+Question 5)
+
+First make changes to grammar.
+
+Question 5 deals with the following regualar expressions referenced in Appendix
+C regarding parser:
+
+statement ::= block
+j if parExpression statement [else statement]
+j for ( [forInit] ; [expression] ; [forUpdate] ) statement
+j while parExpression statement
+j do statement while parExpression ;
+j try block
+fcatch ( formalParameter ) blockg
+[finally block] // must be present if no catches
+j switch parExpression { fswitchBlockStatementGroupg }
+j synchronized parExpression block
+j return [expression] ;
+j throw expression ;
+j break [<identifier>] ;
+j continue [<identifier>] ;
+j ;
+j <identifier> : statement
+j statementExpression ;
+
+memberDecl ::= classDeclaration // inner class
+j interfaceDeclaration // inner interface
+j <identifier> // constructor
+formalParameters
+[throws qualiedIdentier f, qualiedIdentierg] block
+j (void j type) <identiier> // method
+formalParameters f [ ] g
+[throws qualiedIdentier f, qualiedIdentierg] (block j ;)
+j type variableDeclarators ; // eld
+
+interfaceMemberDecl ::= classDeclaration // inner class
+j interfaceDeclaration // inner interface
+j (void j type) <identifier> // method
+formalParameters f [ ] g
+[throws qualiedIdentier f, qualiedIdentierg] ;
+j type variableDeclarators ; // elds; must have inits 
+
+Note that try, catch, finally and throw are all in statement, and throws is in
+memeberDecl and interfaceMemberDecl.
+
+First some tests should be created,
+
+First the basic tests:
+
+package fail;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class TryThrowsParser {
+	public TryThrowsParser() throws IOException, IndexOutOfBoundsException {
+		
+	}
+	 public void test1() throws IOException, IndexOutOfBoundsException {
+	 }
+	 public int test2() throws IOException, IndexOutOfBoundsException {
+	 }
+	public static void main(String[] args) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("foo"));
+            		br.readLine();
+        } catch (IndexOutOfBoundsException e) {
+            System.err.println("IndexOutOfBoundsException: " + e.getMessage());
+        } catch (IOException e) {
+            System.err.println("Caught IOException: " + e.getMessage());
+        } finally {
+            System.out.println("sna");
+        }
+		 try {
+		    //ERROR: without catch or finally 
+		 }
+    }
+}dhfkahj
+
+Then tests for interface:
+
+package fail;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+//I should have called it throws interface
+package fail;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+//I should have called it throws interface
+public interface TryInterface {
+	public void test() throws IOException, IndexOutOfBoundsException {
+    }
+	public int test2() throws IOException, IndexOutOfBoundsException {
+    }
+}hdfka
+
+Next, a new JTryStatement needs to be created.  This can be based on
+JIfStatement and JBlock.
+
+package jminusminus;
+
+import java.util.ArrayList;
+import static jminusminus.CLConstants.*;
+
+class JTryStatement extends JStatement {
+	JBlock tryBlock;
+	ArrayList<JFormalParameter> parameters;
+	ArrayList<JBlock> catchBlock;
+	JBlock finallyBlock;
+	
+	public JTryStatement(int line, JBlock tryBlock,
+		 ArrayList<JFormalParameter> parameters,
+		ArrayList<JBlock> catchBlock, JBlock finallyBlock) {
+		super(line);
+		this.tryBlock = tryBlock;
+		this.parameters = parameters;
+		this.catchBlock = catchBlock;
+		this.finallyBlock = finallyBlock;
+	}
+	
+	public JStatement analyze(Context context) {
+		return this;
+	}
+	
+	public void codegen(CLEmitter output) {
+		
+	}
+	
+	public void writeToStdOut(PrettyPrinter p) {
+		p.printf("<JTryStatement line=\"%d\">\n", line());
+        p.indentRight();
+        p.printf("<TryBlock>\n");
+        p.indentRight();
+        tryBlock.writeToStdOut(p);
+        p.indentLeft();
+        p.printf("</TryBlock>\n");
+        if (!parameters.isEmpty()){
+	        p.printf("<CatchBlock>\n");
+	        p.indentRight();
+	        if (!parameters.isEmpty()) {
+		        p.printf("<CatchParameters>\n");
+		        for (JFormalParameter member : parameters) {
+	                ((JAST) member).writeToStdOut(p);
+	            }
+		        p.printf("</CatchParemeters>\n");
+	        }
+	        int i = 1;
+	        for (JBlock member : catchBlock) {
+	        	p.printf("<CatchBlock %d>\n", i);
+	            ((JAST) member).writeToStdOut(p);
+	            p.printf("</CatchBlock %d>\n", i);
+	            i++;
+	        }
+	        p.indentLeft();
+	        p.printf("</CatchBlock>\n");
+        }
+        if (finallyBlock != null) {
+            p.printf("<FinallyBlock>\n");
+            p.indentRight();
+            finallyBlock.writeToStdOut(p);
+            p.indentLeft();
+            p.printf("</FinallyBlock>\n");
+        }
+        p.indentLeft();
+        p.printf("</JTryStatement>\n");
+	}
+}
+
+
+Finally Parser must be updated by having the following added to statement():
+
+else if (have(TRY)){//ADDED
+        	JBlock tryBlock = block();
+        	ArrayList<JFormalParameter> params =
+		 new ArrayList<JFormalParameter>();
+        	ArrayList<JBlock> catchBlock = new ArrayList<JBlock>();
+        	JBlock finallyBlock = null;
+        	boolean hasCatch = false;
+        	boolean hasFinally = false;
+        	while (have(CATCH)) {
+        		hasCatch = true;
+        		params = formalParameters();
+        		catchBlock.add(block());
+        	}
+//        	if (!hasCatch) {
+//        		mustBe(FINALLY);
+//        		finallyBlock = block();
+//        	} else 
+        		if (have(FINALLY)) {
+        			hasFinally = true;
+        		finallyBlock = block();
+        	}
+        		if (!hasCatch && !hasFinally) {
+        			reportParserError("try block is
+				 missing catch and finally");
+        		}
+        	return new JTryStatement(line, tryBlock, params, 
+			catchBlock, finallyBlock);
+
+In order to deal with throws, not only do modifications need to be made to
+meberDecl and interfaceMemeberDecl, but there also needs to be new parameters
+added to JMethodDeclaration and JConstructorDeclaration to acknowledge the
+existence of throws.
+
+The changes to parser are all very similar to what needs to be done for
+constructor:
+
+ArrayList<JFormalParameter> params = formalParameters();
+            ArrayList<jminusminus.Type> excepts = new ArrayList<jminusminus.Type>();
+            if (have(THROWS)) {
+                excepts.add(qualifiedIdentifier());
+                while (have(COMMA)) {
+                 excepts.add(qualifiedIdentifier());
+                }
+            }
+            JBlock body = block();
+            memberDecl = new JConstructorDeclaration(line, mods, name, params,
+                    body, excepts);
+
+Here are the results of the two test files referenced above:
+
+tests/fail/TryThrowsParser.java:29: try block is missing catch and finally
+tests/fail/TryThrowsParser.java:30: dhfkahj found where class sought
+tests/fail/TryThrowsParser.java:30: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/TryThrowsParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.io.BufferedReader"/>
+    <Import name="java.io.FileReader"/>
+    <Import name="java.io.IOException"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="7" name="TryThrowsParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JConstructorDeclaration line="8" name="TryThrowsParser">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="8">
+          </JBlock>
+        </Body>
+      </JConstructorDeclaration>
+      <JMethodDeclaration line="11" name="test1" returnType="void">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="11">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="13" name="test2" returnType="int">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="13">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="15" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="15" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="15">
+            <JTryStatement line="16">
+              <TryBlock>
+                <JBlock line="16">
+                  <JVariableDeclaration>
+                    <Modifiers>
+                    </Modifiers>
+                    <VariableDeclarators>
+                      <JVariableDeclarator line="17" name="br" type="BufferedReader">
+                        <Initializer>
+                          <JNewOp line="17" type="BufferedReader"/>
+                            <Arguments>
+                              <Argument>
+                                <JNewOp line="17" type="FileReader"/>
+                                  <Arguments>
+                                    <Argument>
+                                      <JLiteralString line="17" type="" value="&quot;foo&quot;"/>
+                                    </Argument>
+                                  </Arguments>
+                                </JNewOp>
+                              </Argument>
+                            </Arguments>
+                          </JNewOp>
+                        </Initializer>
+                      </JVariableDeclarator>
+                    </VariableDeclarators>
+                  </JVariableDeclaration>
+                  <JStatementExpression line="18">
+                    <JMessageExpression line="18" name="readLine">
+                      <Arguments>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+              </TryBlock>
+              <CatchBlock>
+                <CatchParameters>
+                <JFormalParameter line="21" name="e" type="IOException"/>
+                </CatchParemeters>
+                <CatchBlock 1>
+                <JBlock line="19">
+                  <JStatementExpression line="20">
+                    <JMessageExpression line="20" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JBinaryExpression line="20" type="" operator="+">
+                            <Lhs>
+                              <JLiteralString line="20" type="" value="&quot;IndexOutOfBoundsException: &quot;"/>
+                            </Lhs>
+                            <Rhs>
+                              <JMessageExpression line="20" name="getMessage">
+                                <Arguments>
+                                </Arguments>
+                              </JMessageExpression>
+                            </Rhs>
+                          </JBinaryExpression>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+                </CatchBlock 1>
+                <CatchBlock 2>
+                <JBlock line="21">
+                  <JStatementExpression line="22">
+                    <JMessageExpression line="22" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JBinaryExpression line="22" type="" operator="+">
+                            <Lhs>
+                              <JLiteralString line="22" type="" value="&quot;Caught IOException: &quot;"/>
+                            </Lhs>
+                            <Rhs>
+                              <JMessageExpression line="22" name="getMessage">
+                                <Arguments>
+                                </Arguments>
+                              </JMessageExpression>
+                            </Rhs>
+                          </JBinaryExpression>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+                </CatchBlock 2>
+              </CatchBlock>
+              <FinallyBlock>
+                <JBlock line="23">
+                  <JStatementExpression line="24">
+                    <JMessageExpression line="24" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JLiteralString line="24" type="" value="&quot;sna&quot;"/>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+              </FinallyBlock>
+            </JTryStatement>
+            <JTryStatement line="26">
+              <TryBlock>
+                <JBlock line="26">
+                </JBlock>
+              </TryBlock>
+            </JTryStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="30" name="dhfkahj" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+And TryInteface.java
+
+tests/fail/TryInterface.java:13: hdfka found where class sought
+tests/fail/TryInterface.java:13: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/TryInterface.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.io.BufferedReader"/>
+    <Import name="java.io.FileReader"/>
+    <Import name="java.io.IOException"/>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="8" name="TryInterface" super="null">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="9" name="test" returnType="void">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="9">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="11" name="test2" returnType="int">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="11">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+    <JClassDeclaration line="13" name="hdfka" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Finally throw will need to be added.  First it is necssary to create a new
+test.  This can be simply added to lines 12 through 14 of the test above.
+
+	 public void test1() throws IOException, IndexOutOfBoundsException {
+		 if(true){
+			 throw new IOException("foo");
+		 }
+	 }
+
+Now a new JThrow Statement will need to be built.  Throw is similar to return
+in terms of simplicity, so JReturnStatement can be used as a good model.
+
+//modification of JReturnStatement by Bob Wilson
+
+package jminusminus;
+
+import static jminusminus.CLConstants.*;
+
+/**
+ * The AST node for a return-statement. If the enclosing method
+ * in non-void, then there is a value to return, so we keep track
+ * of the expression denoting that value and its type.
+ */
+
+class JThrowStatement
+    extends JStatement {
+
+    /** The returned expression. */
+    private JExpression expr;
+
+    /**
+     * Construct an AST node for a return-statement given its
+     * line number, and the expression that is returned.
+     * 
+     * @param line
+     *                line in which the return-statement appears
+     *                in the source file.
+     * @param expr
+     *                the returned expression.
+     */
+
+    public JThrowStatement(int line, JExpression expr) {
+        super(line);
+        this.expr = expr;
+    }
+
+    /**
+     * Analysis distinguishes between our being in a constructor
+     * or in a regular method in checking return types. In the
+     * case of a return expression, analyze it and check types.
+     * Determine the (possibly void) return type.
+     * 
+     * @param context
+     *                context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JStatement analyze(Context context) {
+//        MethodContext methodContext = context.methodContext();
+//
+//        // The methodContext can be null if return statement
+//        // occurs
+//        // in a block that is not within a method. For example,
+//        // in
+//        // the Java grammar, return statement, at least
+//        // syntactically, can occur in a static block. But since
+//        // j-- does not allow a block to occur outside of a
+//        // method,
+//        // we don't check for methodContext being null
+//
+//        if (methodContext.methodReturnType() == Type.CONSTRUCTOR) {
+//            if (expr != null) {
+//                // Can't return a value from a constructor
+//                JAST.compilationUnit.reportSemanticError(line(),
+//                    "cannot return a value from a constructor");
+//            }
+//        } else {
+//            // Must be a method
+//            Type returnType = methodContext.methodReturnType();
+//	    methodContext.confirmMethodHasReturn();
+//            if (expr != null) {
+//                if (returnType == Type.VOID) {
+//                    // Can't return a value from void method
+//                    JAST.compilationUnit.reportSemanticError(line(),
+//                        "cannot return a value from a void method");
+//                } else {
+//                    // There's a (non-void) return expression.
+//                    // Its
+//                    // type must match the return type of the
+//                    // method
+//                    expr = expr.analyze(context);
+//                    expr.type().mustMatchExpected(line(), returnType);
+//                }
+//            } else {
+//                // The method better have void as return type
+//                if (returnType != Type.VOID) {
+//                    JAST.compilationUnit.reportSemanticError(line(),
+//                        "missing return value");
+//                }
+//            }
+//        }
+        return this;
+    }
+
+    /**
+     * Generate code for the return statement. In the case of
+     * void method types, generate a simple (void) return. In the
+     * case of a return expression, generate code to load that
+     * onto the stack and then generate the appropriate return
+     * instruction.
+     * 
+     * @param output
+     *                the code emitter (basically an abstraction
+     *                for producing the .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+//        if (expr == null) {
+//            output.addNoArgInstruction(RETURN);
+//        } else {
+//            expr.codegen(output);
+//            if (expr.type() == Type.INT
+//                || expr.type() == Type.BOOLEAN
+//                || expr.type() == Type.CHAR) {
+//                output.addNoArgInstruction(IRETURN);
+//            } else {
+//                output.addNoArgInstruction(ARETURN);
+//            }
+//        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+
+    public void writeToStdOut(PrettyPrinter p) {
+        if (expr != null) {
+            p.printf("<JReturnStatement line=\"%d\">\n", line());
+            p.indentRight();
+            expr.writeToStdOut(p);
+            p.indentLeft();
+            p.printf("</JReturnStatement>\n");
+        } else {
+            p.printf("<JReturnStatement line=\"%d\"/>\n", line());
+        }
+    }
+}
+
+Next the parser statement method needs to be modified.
+
+else if (have(THROW)) {
+            JExpression expr = expression();
+            mustBe(SEMI);
+            return new JThrowStatement(line, expr);
+
+Here is the updated results of the parser test,
+
+tests/fail/TryThrowsParser.java:32: try block is missing catch and finally
+tests/fail/TryThrowsParser.java:33: dhfkahj found where class sought
+tests/fail/TryThrowsParser.java:33: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/TryThrowsParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.io.BufferedReader"/>
+    <Import name="java.io.FileReader"/>
+    <Import name="java.io.IOException"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="7" name="TryThrowsParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JConstructorDeclaration line="8" name="TryThrowsParser">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="8">
+          </JBlock>
+        </Body>
+      </JConstructorDeclaration>
+      <JMethodDeclaration line="11" name="test1" returnType="void">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="11">
+            <JIfStatement line="12">
+              <TestExpression>
+                <JLiteralTrue line="12" type=""/>
+              </TestExpression>
+              <ThenClause>
+                <JBlock line="12">
+                  <JThrowStatement line="13">
+                    <JNewOp line="13" type="IOException"/>
+                      <Arguments>
+                        <Argument>
+                          <JLiteralString line="13" type="" value="&quot;foo&quot;"/>
+                        </Argument>
+                      </Arguments>
+                    </JNewOp>
+                  </JThrowStatement>
+                </JBlock>
+              </ThenClause>
+            </JIfStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="16" name="test2" returnType="int">
+      <Throws       IOException      IndexOutOfBoundsException      >
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+        <Body>
+          <JBlock line="16">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      <JMethodDeclaration line="18" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="18" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="18">
+            <JTryStatement line="19">
+              <TryBlock>
+                <JBlock line="19">
+                  <JVariableDeclaration>
+                    <Modifiers>
+                    </Modifiers>
+                    <VariableDeclarators>
+                      <JVariableDeclarator line="20" name="br" type="BufferedReader">
+                        <Initializer>
+                          <JNewOp line="20" type="BufferedReader"/>
+                            <Arguments>
+                              <Argument>
+                                <JNewOp line="20" type="FileReader"/>
+                                  <Arguments>
+                                    <Argument>
+                                      <JLiteralString line="20" type="" value="&quot;foo&quot;"/>
+                                    </Argument>
+                                  </Arguments>
+                                </JNewOp>
+                              </Argument>
+                            </Arguments>
+                          </JNewOp>
+                        </Initializer>
+                      </JVariableDeclarator>
+                    </VariableDeclarators>
+                  </JVariableDeclaration>
+                  <JStatementExpression line="21">
+                    <JMessageExpression line="21" name="readLine">
+                      <Arguments>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+              </TryBlock>
+              <CatchBlock>
+                <CatchParameters>
+                <JFormalParameter line="24" name="e" type="IOException"/>
+                </CatchParemeters>
+                <CatchBlock 1>
+                <JBlock line="22">
+                  <JStatementExpression line="23">
+                    <JMessageExpression line="23" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JBinaryExpression line="23" type="" operator="+">
+                            <Lhs>
+                              <JLiteralString line="23" type="" value="&quot;IndexOutOfBoundsException: &quot;"/>
+                            </Lhs>
+                            <Rhs>
+                              <JMessageExpression line="23" name="getMessage">
+                                <Arguments>
+                                </Arguments>
+                              </JMessageExpression>
+                            </Rhs>
+                          </JBinaryExpression>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+                </CatchBlock 1>
+                <CatchBlock 2>
+                <JBlock line="24">
+                  <JStatementExpression line="25">
+                    <JMessageExpression line="25" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JBinaryExpression line="25" type="" operator="+">
+                            <Lhs>
+                              <JLiteralString line="25" type="" value="&quot;Caught IOException: &quot;"/>
+                            </Lhs>
+                            <Rhs>
+                              <JMessageExpression line="25" name="getMessage">
+                                <Arguments>
+                                </Arguments>
+                              </JMessageExpression>
+                            </Rhs>
+                          </JBinaryExpression>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+                </CatchBlock 2>
+              </CatchBlock>
+              <FinallyBlock>
+                <JBlock line="26">
+                  <JStatementExpression line="27">
+                    <JMessageExpression line="27" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JLiteralString line="27" type="" value="&quot;sna&quot;"/>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                </JBlock>
+              </FinallyBlock>
+            </JTryStatement>
+            <JTryStatement line="29">
+              <TryBlock>
+                <JBlock line="29">
+                </JBlock>
+              </TryBlock>
+            </JTryStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="33" name="dhfkahj" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+
+Question 6)
+
+In order to understand how to create for loops and enhanced for loops jls8 and
+Apeendix C should be consulted.  First note from jls8 that,
+
+"This simple rule prevents the "dangling else" problem. The execution behavior 
+of a statement with the "no short if" restriction is identical to the execution behavior of the same kind of statement without the "no short if" restriction; 
+the distinction is drawn purely to resolve the syntactic difficulty."
+
+Therefore, references to noShortIf can be ignored.
+
+The grammar for the basic for statement is described as,
+
+BasicForStatement:
+for ( [ForInit] ; [Expression] ; [ForUpdate] ) Statement
+
+ForInit:
+StatementExpressionList
+LocalVariableDeclaration
+
+ForUpdate:
+StatementExpressionList
+
+StatementExpressionList:
+StatementExpression {, StatementExpression}
+
+And the grammar for the enhanced for statement is 
+
+EnhancedForStatement:
+for ( {VariableModifier} UnannType VariableDeclaratorId
+: Expression )
+Statement
+
+
+Translated into the syntax of our parser
+
+for ([final] type varaibleDeclarators : qualifiedIdentifier)
+	Statement
+
+First some tests should be created:
+
+package fail;
+
+import java.util.ArrayList;
+
+public class ForParser {
+	public static void main(String[] args){
+		for (;;) {
+			for (int i = 0; 3 > i; i++) {
+			    System.out.println("foo");
+			}
+		}
+		int j;
+		for (j = 0; 3 > j; j++) {
+		    System.out.println("foo");
+		}
+		//ArrayList<String> sna = new ArrayList<String>();
+		for(String buh: sna) {
+			System.out.println("foo");
+		}
+	}
+}dlj
+
+Before getting too deep into figuring how to distinguish between for loops and
+enhanced for loops, or even the creation of a JForStatement class, it makes
+sense to create some helper methods in Parser, as defined in Appendix C,
+
+forInit ::= statementExpression f, statementExpressiong
+| [final] type variableDeclarators
+
+forUpdate ::= statementExpression f, statementExpressiong
+
+Note that Appendix C recognizes a for loop as always being followed by a
+statement:
+
+for ( [forInit] ; [expression] ; [forUpdate] ) statement
+
+A special version of variableDeclarator could be created so that if initial
+returns null, it is known that it is a for-each loop.
+
+Initially it is simpler to just create helper methods for the standard for
+loop.
+
+//parse for loop initialization //variableDe
+    private ArrayList<JStatement> forInit() {
+    	ArrayList<JStatement> jse = new ArrayList<JStatement>();
+    	jse.add(statementExpression());
+    	while (have(COMMA)) {
+    		jse.add(statementExpression());
+    	}
+    	return jse;
+    }
+
+private ArrayList<JStatement> forUpdate() {
+    	ArrayList<JStatement> jse = new ArrayList<JStatement>();
+    	jse.add(statementExpression());
+    	while (have(COMMA)) {
+    		jse.add(statementExpression());
+    	}
+    	return jse;
+    }
+
+Next, it makes sense to create a new class JForStatement.  This can be modeled
+off of JTryStatement.
+
+package jminusminus;
+
+import java.util.ArrayList;
+import static jminusminus.CLConstants.*;
+
+class JForStatement extends JStatement {
+	ArrayList<JVariableDeclarator> init;
+	ArrayList<JStatement> initS;
+	JStatement test;
+	ArrayList<JStatement> update;
+	JStatement express;
+	
+	public JForStatement(int line, ArrayList<JVariableDeclarator> init, 
+		ArrayList<JStatement> initS,
+			JStatement test, ArrayList<JStatement> update,
+							JStatement express) {
+		super(line);
+		this.init = init;
+		this.initS = initS;
+		this.test = test;
+		this.update = update;
+		this.express = express;
+	}
+	
+	public JStatement analyze(Context context) {
+		return this;
+	}
+	
+	public void codegen(CLEmitter output) {
+		
+	}
+	
+	public void writeToStdOut(PrettyPrinter p) {
+		p.printf("<JForStatement line=\"%d\">\n", line());
+		p.indentRight();
+        p.printf("<InitialValue>\n");
+        if (init != null){
+	        p.indentRight();
+	        for (JVariableDeclarator s : init) {
+	        	s.writeToStdOut(p);
+	        }
+	        p.indentLeft();
+        } else if (initS != null){
+	        p.indentRight();
+	        for (JStatement s : initS) {
+	        	s.writeToStdOut(p);
+	        }
+	        p.indentLeft();
+        }
+        p.printf("</InitialValue>\n");
+        p.indentLeft();
+        p.indentRight();
+        p.printf("<Test>\n");
+        if (test != null){
+	        p.indentRight();
+	        test.writeToStdOut(p);
+	        p.indentLeft();
+        }
+        p.printf("</Test>\n");
+        p.indentLeft();
+        p.indentRight();
+        p.printf("<Update>\n");
+        if (update != null){
+	        p.indentRight();
+	        for (JStatement s : update) {
+	        	s.writeToStdOut(p);
+	        }
+	        p.indentLeft();
+        }
+        p.printf("</Update>\n");
+        p.indentLeft();
+        p.printf("<Express>\n");
+        if (express != null){
+	        p.indentRight();
+	        express.writeToStdOut(p);
+	        p.indentLeft();
+        }
+        p.printf("</express>\n");
+        p.printf("</JForStatement>\n");
+	}
+}
+
+
+If forInit has syntax like the form "int i = 0" then it will need to use the
+method:
+
+    private ArrayList<JVariableDeclarator> variableDeclarators(Type type) {
+        ArrayList<JVariableDeclarator> variableDeclarators = new ArrayList<JVariableDeclarator>();
+        do {
+            variableDeclarators.add(variableDeclarator(type));
+        } while (have(COMMA));
+        return variableDeclarators;
+    }
+
+It can test for this method by creating a new method:
+
+    private boolean forInitHasType() {
+        scanner.recordPosition();
+        boolean result = (have(IDENTIFIER) || 
+		have(BOOLEAN) || have(CHAR) || have(INT) || have(LONG))
+        		&& have(IDENTIFIER);
+        scanner.returnToPosition();
+        return result;
+    }
+
+Next enhanced for has to be dealt with, so a new helper method to check for it
+needs to be created,
+
+    private boolean isEnhancedFor() {
+        scanner.recordPosition();
+        boolean result = false;
+        if (have(LPAREN)) {
+	        if (have(IDENTIFIER) || have(BOOLEAN) || have(CHAR) 
+			|| have(INT) || have(LONG)){
+	        	if (have(IDENTIFIER)){
+	        		if (have(COLON)) {
+	        			result = true;
+	        		}
+	        	}
+	        }
+        }
+        scanner.returnToPosition();
+        return result;
+    }
+
+After that a new JEnhacedForStatement class has to be created.  It can be
+modeled off of JForStatement.  Note that an enhanced for loop traverses a
+collection.
+
+package jminusminus;
+
+import java.util.*;//ArrayList;
+import static jminusminus.CLConstants.*;
+
+class JEnhancedForStatement extends JStatement {
+	Type init;
+	TypeName initS;//a quaifiedIdnetifier
+	TypeName iterator;
+	JStatement express;
+	//Collection<?> iterator;
+	//ArrayList<String> test;
+	
+	public JEnhancedForStatement(int line, Type init, TypeName initS,
+			 TypeName iterator,
+			JStatement express) {
+		super(line);
+		this.init = init;
+		this.initS = initS;
+		this.iterator = iterator;
+		this.express = express;
+	}
+	
+	public JStatement analyze(Context context) {
+		return this;
+	}
+	
+	public void codegen(CLEmitter output) {
+		
+	}
+	
+	public void writeToStdOut(PrettyPrinter p) {
+		p.printf("<JEnhancedForStatement line=\"%d\">\n", line());
+		p.indentRight();
+        p.printf("<Type>\n");
+        if (init != null){
+	        p.indentRight();
+	        p.printf("%s\n", init.toString());//init.writeToStdOut(p);
+	        p.indentLeft();
+        }
+	    p.printf("</Type>\n");
+	    p.printf("<Identifier>\n");
+        if (initS != null){
+	        p.indentRight();
+	        p.printf("%s\n", initS.toString());
+	        p.indentLeft();
+        }
+        p.printf("</Identifier>\n");
+        p.printf("<Iterator>\n");
+        if (iterator != null){
+	        p.indentRight();
+	        p.printf("%s\n", iterator.toString());
+	        p.indentLeft();
+        }
+        p.printf("</Iterator>\n");
+        p.indentLeft();
+        p.printf("<Express>\n");
+        if (express != null){
+	        p.indentRight();
+	        express.writeToStdOut(p);
+	        p.indentLeft();
+        }
+        p.printf("</express>\n");
+        p.printf("</JEnhancedForStatement>\n");
+	}
+}
+
+Once this is done, the modifications to statement can be made,
+
+else if (have(FOR)) {
+        	if (isEnhancedFor()){
+        		//System.out.println("here");
+        		mustBe(LPAREN);
+        		Type t = type();
+        		TypeName s = qualifiedIdentifier();
+        		mustBe(COLON);
+        		TypeName r = qualifiedIdentifier();
+        		mustBe(RPAREN);
+        		JStatement statement = statement();
+        		return new 
+		JEnhancedForStatement(line, t, s, r, statement);
+        	} else {
+	        	ArrayList<JVariableDeclarator> fi = null;
+	        	ArrayList<JStatement> fiS = null;
+	        	JStatement test = null;
+	        	ArrayList<JStatement> fu = null;
+	        	mustBe(LPAREN);
+	        	if (!see(SEMI)) {
+	        		if (forInitHasType())
+		 { //seeBasicType()) {// || seeReferenceType()) {
+		        		Type a = type();
+		        		fi = variableDeclarators(a);
+			        	//fi = forInit();
+			        	//System.out.println(fi.get(0).toString());
+	        		} else {
+	        			fiS = forInit();
+	        		}
+	        	}
+	        	mustBe(SEMI);
+	        	if (!see(SEMI)){
+	        		 test = expression();
+	        	}
+	            mustBe(SEMI);
+	            if (!see(RPAREN)) {
+	            	//System.out.println("here");
+		            fu = forUpdate();
+		            //System.out.println(fu.get(0));
+	            }
+	            mustBe(RPAREN);
+	            JStatement statement = statement();
+	            return new JForStatement(line, fi, fiS, test, fu, statement);
+
+And here is the result of the test above:
+
+tests/fail/ForParser.java:21: dlj found where class sought
+tests/fail/ForParser.java:21: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="5" name="ForParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="6" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="6" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="6">
+            <JForStatement line="7">
+              <InitialValue>
+              </InitialValue>
+              <Test>
+              </Test>
+              <Update>
+              </Update>
+            <Express>
+              <JBlock line="7">
+                <JForStatement line="8">
+                  <InitialValue>
+                    <JVariableDeclarator line="8" name="i" type="int">
+                      <Initializer>
+                        <JLiteralInt line="8" type="" value="0"/>
+                      </Initializer>
+                    </JVariableDeclarator>
+                  </InitialValue>
+                  <Test>
+                    <JBinaryExpression line="8" type="" operator="&gt;">
+                      <Lhs>
+                        <JLiteralInt line="8" type="" value="3"/>
+                      </Lhs>
+                      <Rhs>
+                        <JVariable name="i"/>
+                      </Rhs>
+                    </JBinaryExpression>
+                  </Test>
+                  <Update>
+                    <JStatementExpression line="8">
+                      <JUnaryExpression line="8" type="" operator="post++">
+                        <Operand>
+                          <JVariable name="i"/>
+                        </Operand>
+                      </JUnaryExpression>
+                    </JStatementExpression>
+                  </Update>
+                <Express>
+                  <JBlock line="8">
+                    <JStatementExpression line="9">
+                      <JMessageExpression line="9" name="println">
+                        <Arguments>
+                          <Argument>
+                            <JLiteralString line="9" type="" value="&quot;foo&quot;"/>
+                          </Argument>
+                        </Arguments>
+                      </JMessageExpression>
+                    </JStatementExpression>
+                  </JBlock>
+                </express>
+                </JForStatement>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="12" name="j" type="int">
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JForStatement line="13">
+              <InitialValue>
+                <JStatementExpression line="13">
+                  <JBinaryExpression line="13" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="j"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="13" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="13" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="13" type="" value="3"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="j"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="13">
+                  <JUnaryExpression line="13" type="" operator="post++">
+                    <Operand>
+                      <JVariable name="j"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="13">
+                <JStatementExpression line="14">
+                  <JMessageExpression line="14" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="14" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JEnhancedForStatement line="17">
+              <Type>
+                String
+              </Type>
+              <Identifier>
+                buh
+              </Identifier>
+              <Iterator>
+                sna
+              </Iterator>
+            <Express>
+              <JBlock line="17">
+                <JStatementExpression line="18">
+                  <JMessageExpression line="18" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="18" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JEnhancedForStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="21" name="dlj" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+After reviewing Appendix C it can also be seen that an optional final may be
+added.  However, although this appears to work in the enhanced for loop, after
+reviewing Dr Java, it appears that there are no scenarios where it could works
+using a standard for loop:
+
+for (final int i = 0; i < 0; ) {
+System.out.println("fool");
+}
+ 
+1 error found:
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java [line: 148]
+Error: unreachable statement
+ 
+And,
+ 
+for (final int i = 0; i < 0; i++) {
+System.out.println("fool");
+}
+ 
+1 error found:
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java [line: 148]
+Error: cannot assign a value to final variable i
+
+for (final int i = 0;;) {//i++) {
+System.out.println("fool");
+}
+ArrayList<String> sna = new ArrayList<String>();      //line 15
+ 
+1 error found:
+File: C:\Users\bwils_000\Desktop\EPMisc\testsDrJava\test2.java [line: 151]
+Error: unreachable statement
+
+So only changes need to be made the enhanced for loop:
+
+package jminusminus;
+
+import java.util.*;//ArrayList;
+import static jminusminus.CLConstants.*;
+
+class JEnhancedForStatement extends JStatement {
+	private Type init;
+	private TypeName initS;//a quaifiedIdnetifier
+	private TypeName iterator;
+	private JStatement express;
+	private String fin; //optional final
+	//Collection<?> iterator;
+	//ArrayList<String> test;
+	
+	public JEnhancedForStatement(int line, Type init, TypeName initS, TypeName iterator,
+			JStatement express, String fin) {
+		super(line);
+		this.init = init;
+		this.initS = initS;
+		this.iterator = iterator;
+		this.express = express;
+		this.fin = fin;
+	}
+	
+	public JStatement analyze(Context context) {
+		return this;
+	}
+	
+	public void codegen(CLEmitter output) {
+		
+	}
+	
+	public void writeToStdOut(PrettyPrinter p) {
+		p.printf("<JEnhancedForStatement line=\"%d\">\n", line());
+		if (fin != null){
+        	p.indentRight();
+	        p.printf("%s\n", fin);
+	        p.indentLeft();
+        }
+		p.indentRight();
+        p.printf("<Type>\n");
+        if (init != null){
+	        p.indentRight();
+	        p.printf("%s\n", init.toString());//init.writeToStdOut(p);
+	        p.indentLeft();
+        }
+	    p.printf("</Type>\n");
+	    p.printf("<Identifier>\n");
+        if (initS != null){
+	        p.indentRight();
+	        p.printf("%s\n", initS.toString());
+	        p.indentLeft();
+        }
+        p.printf("</Identifier>\n");
+        p.printf("<Iterator>\n");
+        if (iterator != null){
+	        p.indentRight();
+	        p.printf("%s\n", iterator.toString());
+	        p.indentLeft();
+        }
+        p.printf("</Iterator>\n");
+        p.indentLeft();
+        p.printf("<Express>\n");
+        if (express != null){
+	        p.indentRight();
+	        express.writeToStdOut(p);
+	        p.indentLeft();
+        }
+        p.printf("</express>\n");
+        p.printf("</JEnhancedForStatement>\n");
+	}
+}
+
+And,
+
+   private boolean isEnhancedFor() {
+        scanner.recordPosition();
+        boolean result = false;
+        if (have(LPAREN)) {
+        	if (have(FINAL)){//if it uses the optional final
+		        if (have(IDENTIFIER) || have(BOOLEAN) || have(CHAR) 
+			|| have(INT) || have(LONG)){
+		        	if (have(IDENTIFIER)){
+		        		if (have(COLON)) {
+		        			result = true;
+		        		}
+		        	}
+		        }//if it does not use the optional final
+        	} else if (have(IDENTIFIER) || have(BOOLEAN) || have(CHAR) 
+			|| have(INT) || have(LONG)){
+	        	if (have(IDENTIFIER)){
+	        		if (have(COLON)) {
+	        			result = true;
+	        		}
+	        	}
+	        }
+        }
+        scanner.returnToPosition();
+        return result;
+    } 
+
+And,
+
+else if (have(FOR)) {
+        	if (isEnhancedFor()){
+        		//System.out.println("here");
+        		mustBe(LPAREN);
+        		String fin = null;
+        		if (have(FINAL)) {
+    	    		fin = "final";//scanner.previousToken().image();
+    	    	}
+        		Type t = type();
+        		TypeName s = qualifiedIdentifier();
+        		mustBe(COLON);
+        		TypeName r = qualifiedIdentifier();
+        		mustBe(RPAREN);
+        		JStatement statement = statement();
+        		return new JEnhancedForStatement(line, t, s, r, 
+					statement, fin);
+
+And here are the changes to the test:
+
+package fail;
+
+import java.util.ArrayList;
+
+public class ForParser {
+	public static void main(String[] args){
+		for (;;) {
+			for (int i = 0; 3 > i; i++) {
+			    System.out.println("foo");
+			}
+		}
+		int j;
+		for (j = 0; 3 > j; j++) {
+		    System.out.println("foo");
+		}
+		//ArrayList<String> sna = new ArrayList<String>();
+		for(String buh: sna) {
+			System.out.println("foo");
+		}
+		
+		for(final String buh: sna) {
+			System.out.println("foo");
+		}
+	}
+}dlj
+
+And here are the results:
+
+tests/fail/ForParser.java:25: dlj found where class sought
+tests/fail/ForParser.java:25: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/ForParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+    <Import name="java.util.ArrayList"/>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="5" name="ForParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="6" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="6" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="6">
+            <JForStatement line="7">
+              <InitialValue>
+              </InitialValue>
+              <Test>
+              </Test>
+              <Update>
+              </Update>
+            <Express>
+              <JBlock line="7">
+                <JForStatement line="8">
+                  <InitialValue>
+                    <JVariableDeclarator line="8" name="i" type="int">
+                      <Initializer>
+                        <JLiteralInt line="8" type="" value="0"/>
+                      </Initializer>
+                    </JVariableDeclarator>
+                  </InitialValue>
+                  <Test>
+                    <JBinaryExpression line="8" type="" operator="&gt;">
+                      <Lhs>
+                        <JLiteralInt line="8" type="" value="3"/>
+                      </Lhs>
+                      <Rhs>
+                        <JVariable name="i"/>
+                      </Rhs>
+                    </JBinaryExpression>
+                  </Test>
+                  <Update>
+                    <JStatementExpression line="8">
+                      <JUnaryExpression line="8" type="" operator="post++">
+                        <Operand>
+                          <JVariable name="i"/>
+                        </Operand>
+                      </JUnaryExpression>
+                    </JStatementExpression>
+                  </Update>
+                <Express>
+                  <JBlock line="8">
+                    <JStatementExpression line="9">
+                      <JMessageExpression line="9" name="println">
+                        <Arguments>
+                          <Argument>
+                            <JLiteralString line="9" type="" value="&quot;foo&quot;"/>
+                          </Argument>
+                        </Arguments>
+                      </JMessageExpression>
+                    </JStatementExpression>
+                  </JBlock>
+                </express>
+                </JForStatement>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="12" name="j" type="int">
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JForStatement line="13">
+              <InitialValue>
+                <JStatementExpression line="13">
+                  <JBinaryExpression line="13" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="j"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralInt line="13" type="" value="0"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="13" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="13" type="" value="3"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="j"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="13">
+                  <JUnaryExpression line="13" type="" operator="post++">
+                    <Operand>
+                      <JVariable name="j"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="13">
+                <JStatementExpression line="14">
+                  <JMessageExpression line="14" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="14" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JEnhancedForStatement line="17">
+              <Type>
+                String
+              </Type>
+              <Identifier>
+                buh
+              </Identifier>
+              <Iterator>
+                sna
+              </Iterator>
+            <Express>
+              <JBlock line="17">
+                <JStatementExpression line="18">
+                  <JMessageExpression line="18" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="18" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JEnhancedForStatement>
+            <JEnhancedForStatement line="21">
+              final
+              <Type>
+                String
+              </Type>
+              <Identifier>
+                buh
+              </Identifier>
+              <Iterator>
+                sna
+              </Iterator>
+            <Express>
+              <JBlock line="21">
+                <JStatementExpression line="22">
+                  <JMessageExpression line="22" name="println">
+                    <Arguments>
+                      <Argument>
+                        <JLiteralString line="22" type="" value="&quot;foo&quot;"/>
+                      </Argument>
+                    </Arguments>
+                  </JMessageExpression>
+                </JStatementExpression>
+              </JBlock>
+            </express>
+            </JEnhancedForStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="25" name="dlj" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Question 7)
+
+According to Appendix C, the do while statement does not appear to need any
+supporting methods.  
+
+do statement while parExpression ;
+
+The first thing that needs to be done is a test needs to be created.
+
+package fail;
+
+public class DoWhileParser {
+	public static void main(String[] args){
+		int dw = 1;
+        do {
+            System.out.println("pow");
+            dw++;
+        } while (3 > dw);
+	}
+	
+}adhkfdj
+
+So the second thing that needs to be done is a JDoWhileStatement needs to be
+created.  This should be based on JWhileStatement.
+
+//modification of JWhileStaement by Bob Wilson
+
+package jminusminus;
+
+import static jminusminus.CLConstants.*;
+
+/**
+ * The AST node for a while-statement.
+ */
+
+class JDoWhileStatement extends JStatement {
+
+    /** Test expression. */
+    private JExpression condition;
+
+    /** The body. */
+    private JStatement body;
+
+    /**
+     * Construct an AST node for a while-statement given its line number, the
+     * test expression, and the body.
+     * 
+     * @param line
+     *            line in which the while-statement occurs in the source file.
+     * @param condition
+     *            test expression.
+     * @param body
+     *            the body.
+     */
+
+    public JDoWhileStatement(int line, JExpression condition, JStatement body) {
+        super(line);
+        this.condition = condition;
+        this.body = body;
+    }
+
+    /**
+     * Analysis involves analyzing the test, checking its type and analyzing the
+     * body statement.
+     * 
+     * @param context
+     *            context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JDoWhileStatement analyze(Context context) {
+//        condition = condition.analyze(context);
+//        condition.type().mustMatchExpected(line(), Type.BOOLEAN);
+//        body = (JStatement) body.analyze(context);
+        return this;
+    }
+
+    /**
+     * Generate code for the while loop.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+//        // Need two labels
+//        String test = output.createLabel();
+//        String out = output.createLabel();
+//
+//        // Branch out of the loop on the test condition
+//        // being false
+//        output.addLabel(test);
+//        condition.codegen(output, out, false);
+//
+//        // Codegen body
+//        body.codegen(output);
+//
+//        // Unconditional jump back up to test
+//        output.addBranchInstruction(GOTO, test);
+//
+//        // The label below and outside the loop
+//        output.addLabel(out);
+    }
+
+    /**
+     * @inheritDoc
+     */
+
+    public void writeToStdOut(PrettyPrinter p) {
+        p.printf("<JDoWhileStatement line=\"%d\">\n", line());
+        p.indentRight();
+        p.printf("<TestExpression>\n");
+        p.indentRight();
+        condition.writeToStdOut(p);
+        p.indentLeft();
+        p.printf("</TestExpression>\n");
+        p.printf("<Body>\n");
+        p.indentRight();
+        body.writeToStdOut(p);
+        p.indentLeft();
+        p.printf("</Body>\n");
+        p.indentLeft();
+        p.printf("</JDoWhileStatement>\n");
+    }
+
+}
+
+
+There is very little difference between while and do while.  All that needs to
+be done is the rearrangement of terms.
+
+else if (have(DO)) {
+        	JStatement statement = statement();
+        	mustBe(WHILE);
+            JExpression test = parExpression();
+            return new JDoWhileStatement(line, test, statement);
+
+And here is the result of the test referenced above.
+
+tests/fail/DoWhileParser.java:12: adhkfdj found where class sought
+tests/fail/DoWhileParser.java:12: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/DoWhileParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="DoWhileParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="5" name="dw" type="int">
+                  <Initializer>
+                    <JLiteralInt line="5" type="" value="1"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JDoWhileStatement line="6">
+              <TestExpression>
+                <JBinaryExpression line="9" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="9" type="" value="3"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="dw"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </TestExpression>
+              <Body>
+                <JBlock line="6">
+                  <JStatementExpression line="7">
+                    <JMessageExpression line="7" name="println">
+                      <Arguments>
+                        <Argument>
+                          <JLiteralString line="7" type="" value="&quot;pow&quot;"/>
+                        </Argument>
+                      </Arguments>
+                    </JMessageExpression>
+                  </JStatementExpression>
+                  <JStatementExpression line="8">
+                    <JUnaryExpression line="8" type="" operator="post++">
+                      <Operand>
+                        <JVariable name="dw"/>
+                      </Operand>
+                    </JUnaryExpression>
+                  </JStatementExpression>
+                </JBlock>
+              </Body>
+            </JDoWhileStatement>
+            <JEmptyStatement line="9"/>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="12" name="adhkfdj" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Question 8)
+
+First create some test cases.  Start with tests for break.
+
+package fail;
+
+public class SwitchBreakParser {
+	public static void main(String[] args){
+		//note that parser does not currently support labels
+		//test:
+		for (int i = 0; 4 > i; i++){
+			break test;
+		}
+		
+		for (int i = 0; 4 > i; i++){
+			break;
+		}
+	}
+}j;kl
+
+Next create a new JBreakStatement class.  It will be similar to
+JReturnStatement so this can be used as a template.
+
+//modification of JReturnStatement by Bob Wilson
+
+package jminusminus;
+
+import static jminusminus.CLConstants.*;
+
+/**
+ * The AST node for a return-statement. If the enclosing method
+ * in non-void, then there is a value to return, so we keep track
+ * of the expression denoting that value and its type.
+ */
+
+class JBreakStatement
+    extends JStatement {
+
+    
+    private String expr;
+
+    /**
+     * Construct an AST node for a return-statement given its
+     * line number, and the expression that is returned.
+     * 
+     * @param line
+     *                line in which the return-statement appears
+     *                in the source file.
+     * @param expr
+     *                the returned expression.
+     */
+
+    public JBreakStatement(int line, String expr) {
+        super(line);
+        this.expr = expr;
+    }
+
+    /**
+     * Analysis distinguishes between our being in a constructor
+     * or in a regular method in checking return types. In the
+     * case of a return expression, analyze it and check types.
+     * Determine the (possibly void) return type.
+     * 
+     * @param context
+     *                context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JStatement analyze(Context context) {
+//        MethodContext methodContext = context.methodContext();
+//
+//        // The methodContext can be null if return statement
+//        // occurs
+//        // in a block that is not within a method. For example,
+//        // in
+//        // the Java grammar, return statement, at least
+//        // syntactically, can occur in a static block. But since
+//        // j-- does not allow a block to occur outside of a
+//        // method,
+//        // we don't check for methodContext being null
+//
+//        if (methodContext.methodReturnType() == Type.CONSTRUCTOR) {
+//            if (expr != null) {
+//                // Can't return a value from a constructor
+//                JAST.compilationUnit.reportSemanticError(line(),
+//                    "cannot return a value from a constructor");
+//            }
+//        } else {
+//            // Must be a method
+//            Type returnType = methodContext.methodReturnType();
+//	    methodContext.confirmMethodHasReturn();
+//            if (expr != null) {
+//                if (returnType == Type.VOID) {
+//                    // Can't return a value from void method
+//                    JAST.compilationUnit.reportSemanticError(line(),
+//                        "cannot return a value from a void method");
+//                } else {
+//                    // There's a (non-void) return expression.
+//                    // Its
+//                    // type must match the return type of the
+//                    // method
+//                    expr = expr.analyze(context);
+//                    expr.type().mustMatchExpected(line(), returnType);
+//                }
+//            } else {
+//                // The method better have void as return type
+//                if (returnType != Type.VOID) {
+//                    JAST.compilationUnit.reportSemanticError(line(),
+//                        "missing return value");
+//                }
+//            }
+//        }
+        return this;
+    }
+
+    /**
+     * Generate code for the return statement. In the case of
+     * void method types, generate a simple (void) return. In the
+     * case of a return expression, generate code to load that
+     * onto the stack and then generate the appropriate return
+     * instruction.
+     * 
+     * @param output
+     *                the code emitter (basically an abstraction
+     *                for producing the .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+//        if (expr == null) {
+//            output.addNoArgInstruction(RETURN);
+//        } else {
+//            expr.codegen(output);
+//            if (expr.type() == Type.INT
+//                || expr.type() == Type.BOOLEAN
+//                || expr.type() == Type.CHAR) {
+//                output.addNoArgInstruction(IRETURN);
+//            } else {
+//                output.addNoArgInstruction(ARETURN);
+//            }
+//        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+
+    public void writeToStdOut(PrettyPrinter p) {
+        if (expr != null) {
+            p.printf("<JBreakStatement line=\"%d\">\n", line());
+            p.indentRight();
+            p.printf("%s\n", expr);
+            //expr.writeToStdOut(p);
+            p.indentLeft();
+            p.printf("</JBreakStatement>\n");
+        } else {
+            p.printf("<JBreakStatement line=\"%d\"/>\n", line());
+        }
+    }
+}
+
+The a modification of the statement method in Parser needs to be made.
+
+		else if (have(BREAK)) {
+        	String name = null;
+	    	if (have(IDENTIFIER)) {
+	    		name = scanner.previousToken().image();
+	    	}
+            return new JBreakStatement(line, name);
+
+Finally the test can be run.
+
+tests/fail/SwitchBreakParser.java:17: jmkl found where class sought
+tests/fail/SwitchBreakParser.java:17: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/SwitchBreakParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="SwitchBreakParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JForStatement line="7">
+              <InitialValue>
+                <JVariableDeclarator line="7" name="i" type="int">
+                  <Initializer>
+                    <JLiteralInt line="7" type="" value="0"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="7" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="7" type="" value="4"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="i"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="7">
+                  <JUnaryExpression line="7" type="" operator="post++">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="7">
+                <JBreakStatement line="8">
+                  test
+                </JBreakStatement>
+                <JEmptyStatement line="8"/>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JForStatement line="11">
+              <InitialValue>
+                <JVariableDeclarator line="11" name="i" type="int">
+                  <Initializer>
+                    <JLiteralInt line="11" type="" value="0"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="11" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="11" type="" value="4"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="i"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="11">
+                  <JUnaryExpression line="11" type="" operator="post++">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="11">
+                <JBreakStatement line="12"/>
+                <JEmptyStatement line="12"/>
+              </JBlock>
+            </express>
+            </JForStatement>
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="17" name="jmkl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Next, the test should be updated so that it can test for switch statements.  It
+uses modification of code found here, 
+https://docs.oracle.com/javase/tutorial/java/nutsandbolts/switch.html
+
+package fail;
+
+public class SwitchBreakParser {
+	public static void main(String[] args){
+		//note that parser does not currently support labels
+		//test:
+		for (int i = 0; 4 > i; i++){
+			break test;
+		}
+		
+		for (int i = 0; 4 > i; i++){
+			break;
+		}
+
+		int month = 8;
+		  int day = 0;
+		        String monthString;
+		        switch (month) {
+		            case 1:  monthString = "January";
+		                     break;
+		            case 2:  monthString = "February";
+		                     break;
+		            case 3:  monthString = "March";
+		                     break;
+		            case 4:  monthString = "April";
+		                     break;
+		            case 5:  monthString = "May";
+		                     break;
+		            case 6:  monthString = "June";
+//		                     switch (day) {
+//		                     case 1: monthString = "foo";
+//		                     break;
+//		                     case 2: monthString = "bar";
+//		                     break;
+//		                     default : monthString = "next";
+//		                     }
+		            case 7:  monthString = "July";
+		                     break;
+		            case 8:  monthString = "August";
+		                     break;
+		            case 9:  monthString = "September";
+		            case 10: monthString = "October";
+		      case 11: monthString = "November";
+		      case 12: monthString = "December";
+		      default: monthString = "Invalid month";
+		  }
+		  System.out.println(monthString);
+	}
+}jmkl
+
+Before working on JSwitchStatement, it makes sense to work on the helper
+methods because their design will determine the arguments that the
+JSwitchStatement will have to take in.
+
+They should be based off of the BNF's in Appendix C,
+
+The outer brackets appear to refer to literal curly braces to be read, but the
+inner brackets appear to refer to zero or more switch block statements.
+
+switch parExpression { {switchBlockStatementGroup} }
+
+switchBlockStatementGroup ::= switchLabel {switchLabel} {blockStatement}
+
+switchLabel ::= case expression : // must be constant
+		| default :
+
+Note that neither jls8 or the BNF's from Appendix C make any specific reference
+to nested switch statements.  Each switch label can return nothing more than an
+expression or null in the case of being default (if case is followed by null
+then it is an error).  switchLabel does not need to do anything more
+sophisticated than this.  The switchBlockStatementGroup returns a
+HashMap<ArrayList<JExpression>, ArrayList<JStatement>>
+And then finally at the top inside Statement() returns:
+ArrayList<HashMap<ArrayList<JExpression>, ArrayList<JStatement>>>
+
+How do you know if a blockStatement is comming up or you have reached the end?
+If you don't see a CASE or DEFAULT then you should see either a block statement
+or a right curly braces.
+
+Note:
+
+ArrayList<String> test99 = new ArrayList<String>();
+System.out.println(test99.size());//returns 0
+test99.add(null);
+System.out.println(test99.size());//returns 1
+
+The support methods are as follows:
+
+    public HashMap<ArrayList<JExpression>, ArrayList<JStatement>> switchBlockStatementGroup() {
+    	HashMap<ArrayList<JExpression>, ArrayList<JStatement>> map = 
+    			new HashMap<ArrayList<JExpression>, ArrayList<JStatement>>();
+    	
+    	ArrayList<JExpression> casOrDef = new ArrayList<JExpression>();
+    	while (see(CASE) || see(DEFAULT)){
+    		casOrDef.add(switchLabel());
+    	}
+    	
+    	//how do you know if there is a blockStatement coming up?
+    	//If you don't see a CASE or DEFAULT then you should see either a block statement
+    	//or a right curly braces.
+    	ArrayList<JStatement> ex = new ArrayList<JStatement>();
+    	while(!see(RCURLY)){
+    		ex.add(blockStatement());
+    	}
+    	return map;
+    }
+    
+    //it assumes CASE or DEFAULT have been seen
+    //CASE can not have a null expression
+    public JExpression switchLabel() {
+    	JExpression a = null;
+    	if (have(CASE)){
+    		a = expression();
+    	}
+    	return a;
+    }
+
+Next, it makes sense to make the changes to statement() and comment them out
+until JSwitchStatement is created.
+
+//        } else if (have(SWITCH)) {
+//            mustBe(LCURLY);
+//            ArrayList<HashMap<ArrayList<JExpression>, ArrayList<JStatement>>> 				sws =
+//            		new ArrayList<HashMap<ArrayList<JExpression>, ArrayList<				JStatement>>>();
+//            while(!see(RCURLY)){
+//            	sws.add(switchBlockStatementGroup())
+//            }
+//            mustBe(RCURLY);
+//            return new JSwitchStatement(line, sws);
+
+Now there is enough information to work on the JSwitchStaement class.
+
+//modification of JReturnStatement by Bob Wilson
+
+package jminusminus;
+
+import static jminusminus.CLConstants.*;
+
+import java.util.ArrayList;
+
+import java.util.HashMap;
+
+/**
+ * The AST node for a return-statement. If the enclosing method
+ * in non-void, then there is a value to return, so we keep track
+ * of the expression denoting that value and its type.
+ */
+
+class JSwitchStatement
+    extends JStatement {
+
+    
+	private ArrayList<HashMap<ArrayList<JExpression>, ArrayList<JStatement>>> sws;
+
+    /**
+     * Construct an AST node for a return-statement given its
+     * line number, and the expression that is returned.
+     * 
+     * @param line
+     *                line in which the return-statement appears
+     *                in the source file.
+     * @param expr
+     *                the returned expression.
+     */
+
+    public JSwitchStatement(int line, ArrayList<HashMap<ArrayList<JExpression>, ArrayList<JStatement>>> sws) {
+        super(line);
+        this.sws = sws;
+    }
+
+    /**
+     * Analysis distinguishes between our being in a constructor
+     * or in a regular method in checking return types. In the
+     * case of a return expression, analyze it and check types.
+     * Determine the (possibly void) return type.
+     * 
+     * @param context
+     *                context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JStatement analyze(Context context) {
+//        MethodContext methodContext = context.methodContext();
+//
+//        // The methodContext can be null if return statement
+//        // occurs
+//        // in a block that is not within a method. For example,
+//        // in
+//        // the Java grammar, return statement, at least
+//        // syntactically, can occur in a static block. But since
+//        // j-- does not allow a block to occur outside of a
+//        // method,
+//        // we don't check for methodContext being null
+//
+//        if (methodContext.methodReturnType() == Type.CONSTRUCTOR) {
+//            if (expr != null) {
+//                // Can't return a value from a constructor
+//                JAST.compilationUnit.reportSemanticError(line(),
+//                    "cannot return a value from a constructor");
+//            }
+//        } else {
+//            // Must be a method
+//            Type returnType = methodContext.methodReturnType();
+//	    methodContext.confirmMethodHasReturn();
+//            if (expr != null) {
+//                if (returnType == Type.VOID) {
+//                    // Can't return a value from void method
+//                    JAST.compilationUnit.reportSemanticError(line(),
+//                        "cannot return a value from a void method");
+//                } else {
+//                    // There's a (non-void) return expression.
+//                    // Its
+//                    // type must match the return type of the
+//                    // method
+//                    expr = expr.analyze(context);
+//                    expr.type().mustMatchExpected(line(), returnType);
+//                }
+//            } else {
+//                // The method better have void as return type
+//                if (returnType != Type.VOID) {
+//                    JAST.compilationUnit.reportSemanticError(line(),
+//                        "missing return value");
+//                }
+//            }
+//        }
+        return this;
+    }
+
+    /**
+     * Generate code for the return statement. In the case of
+     * void method types, generate a simple (void) return. In the
+     * case of a return expression, generate code to load that
+     * onto the stack and then generate the appropriate return
+     * instruction.
+     * 
+     * @param output
+     *                the code emitter (basically an abstraction
+     *                for producing the .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+//        if (expr == null) {
+//            output.addNoArgInstruction(RETURN);
+//        } else {
+//            expr.codegen(output);
+//            if (expr.type() == Type.INT
+//                || expr.type() == Type.BOOLEAN
+//                || expr.type() == Type.CHAR) {
+//                output.addNoArgInstruction(IRETURN);
+//            } else {
+//                output.addNoArgInstruction(ARETURN);
+//            }
+//        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+
+    public void writeToStdOut(PrettyPrinter p) {
+//        if (expr != null) {
+//            p.printf("<JBreakStatement line=\"%d\">\n", line());
+//            p.indentRight();
+//            p.printf("%s\n", expr);
+//            //expr.writeToStdOut(p);
+//            p.indentLeft();
+//            p.printf("</JBreakStatement>\n");
+//        } else {
+//            p.printf("<JBreakStatement line=\"%d\"/>\n", line());
+//        }
+    }
+}
+
+It is possible to create two paralell ArrayLists.  One can have JExpressions
+for case and default.  The other can contain JStatements.  This other can be an
+ArrayList of ArrayLists it can contain either null, if the case or default is
+not followed by a JStatement, or it can be followed by a JStatement
+or it can be followed it can be followed a list of JStatements.  So the other
+JStatement will have to be an ArrayList of Arraylists of JStatements.
+
+
+The final modificactions tests and test results are as follows:
+
+else if (have(SWITCH)) {
+        	ArrayList<JExpression> sws;
+        	ArrayList<JStatement> sws2;
+        	ArrayList<ArrayList<JStatement>> sws3;
+        	parExpression();
+            mustBe(LCURLY);
+//            ArrayList<HashMap<ArrayList<JExpression>, ArrayList<JStatement>>> sws =
+//            		new ArrayList<HashMap<ArrayList<JExpression>, ArrayList<JStatement>>>();
+//            while(!see(RCURLY)){
+//            	sws.add(switchBlockStatementGroup())
+//            }
+            //sws = switchBlockStatementGroup();
+            sws = new ArrayList<JExpression>();
+            
+            sws3 = new ArrayList<ArrayList<JStatement>>();
+        	while (see(CASE) || see(DEFAULT)){
+        		sws.add(switchLabel());
+        		//case or default is followed by
+        		//1 or mores statements
+        		sws2 = new ArrayList<JStatement>();
+        		if (!see(CASE) && !see(DEFAULT) && !see(RCURLY)) {
+        			//System.out.println("here");
+        			while (!see(CASE) && !see(DEFAULT) &&
+					 !see(RCURLY)) {
+        				sws2.add(blockStatement());
+        			}
+        		} else {//not followed by a statement
+        			sws2.add(null);
+        		}
+        		sws3.add(sws2);
+        	}
+            mustBe(RCURLY);
+            return new JSwitchStatement(line, sws, sws3);
+
+    	ArrayList<JExpression> casOrDef = new ArrayList<JExpression>();
+    	while (see(CASE) || see(DEFAULT)){
+    		casOrDef.add(switchLabel());
+    		if (!see(CASE) && !see(DEFAULT)) {
+    			//System.out.println("here");
+    			blockStatement();
+    		}
+    	}
+    	
+    	//how do you know if there is a blockStatement coming up?
+    	//If you don't see a CASE or DEFAULT then you should see either a block statement
+    	//or a right curly braces.
+//    	ArrayList<JStatement> ex = new ArrayList<JStatement>();
+//    	while(!see(RCURLY)){
+//    		ex.add(blockStatement());
+//    	}
+    	//return map;
+    	return casOrDef;
+    }
+    
+    //it assumes CASE or DEFAULT have been seen
+    //CASE can not have a null expression
+    public JExpression switchLabel() {
+    	JExpression a = null;
+    	if (have(CASE)){
+    		a = expression();
+    		mustBe(COLON);
+    	} else {
+    		mustBe(DEFAULT);
+    		mustBe(COLON);
+    	}
+    	return a;
+    }
+
+package fail;
+
+public class SwitchBreakParser {
+	public static void main(String[] args){
+		//note that parser does not currently support labels
+		//test:
+		for (int i = 0; 4 > i; i++){
+			break test;
+		}
+		
+		for (int i = 0; 4 > i; i++){
+			break;
+		}
+
+		int month = 8;
+		  int day = 0;
+		        String monthString;
+		        switch (month) {
+//		        case 1: monthString = "January";
+//		        	break;
+//		        case 2:
+//		        default :
+		            case 1:  monthString = "January";
+		                     break;
+		            case 2:  monthString = "February";
+		                     break;
+		            case 3:  monthString = "March";
+		                     break;
+		            case 4:  monthString = "April";
+		                     break;
+		            case 5:  monthString = "May";
+		                     break;
+		            case 6:  monthString = "June";
+		                     switch (day) {
+		                     case 1: monthString = "foo";
+		                     break;
+		                     case 2: monthString = "bar";
+		                     break;
+		                     default : monthString = "next";
+		                     }
+		            case 7:  monthString = "July";
+		                     break;
+		            case 8:  monthString = "August";
+		                     break;
+		            case 9:  monthString = "September";
+		            case 10: monthString = "October";
+		      case 11: monthString = "November";
+		      case 12: monthString = "December";
+		      default: monthString = "Invalid month";
+		  }
+		  //System.out.println(monthString);
+	}
+}jmkl
+
+
+tests/fail/SwitchBreakParser.java:53: jmkl found where class sought
+tests/fail/SwitchBreakParser.java:53: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/SwitchBreakParser.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="SwitchBreakParser" super="java.lang.Object">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="main" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+          <Modifier name="static"/>
+        </Modifiers>
+        <FormalParameters>
+          <JFormalParameter line="4" name="args" type="String[]"/>
+        </FormalParameters>
+        <Body>
+          <JBlock line="4">
+            <JForStatement line="7">
+              <InitialValue>
+                <JVariableDeclarator line="7" name="i" type="int">
+                  <Initializer>
+                    <JLiteralInt line="7" type="" value="0"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="7" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="7" type="" value="4"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="i"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="7">
+                  <JUnaryExpression line="7" type="" operator="post++">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="7">
+                <JBreakStatement line="8">
+                  test
+                </JBreakStatement>
+                <JEmptyStatement line="8"/>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JForStatement line="11">
+              <InitialValue>
+                <JVariableDeclarator line="11" name="i" type="int">
+                  <Initializer>
+                    <JLiteralInt line="11" type="" value="0"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </InitialValue>
+              <Test>
+                <JBinaryExpression line="11" type="" operator="&gt;">
+                  <Lhs>
+                    <JLiteralInt line="11" type="" value="4"/>
+                  </Lhs>
+                  <Rhs>
+                    <JVariable name="i"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </Test>
+              <Update>
+                <JStatementExpression line="11">
+                  <JUnaryExpression line="11" type="" operator="post++">
+                    <Operand>
+                      <JVariable name="i"/>
+                    </Operand>
+                  </JUnaryExpression>
+                </JStatementExpression>
+              </Update>
+            <Express>
+              <JBlock line="11">
+                <JBreakStatement line="12"/>
+                <JEmptyStatement line="12"/>
+              </JBlock>
+            </express>
+            </JForStatement>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="15" name="month" type="int">
+                  <Initializer>
+                    <JLiteralInt line="15" type="" value="8"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="16" name="day" type="int">
+                  <Initializer>
+                    <JLiteralInt line="16" type="" value="0"/>
+                  </Initializer>
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JVariableDeclaration>
+              <Modifiers>
+              </Modifiers>
+              <VariableDeclarators>
+                <JVariableDeclarator line="17" name="monthString" type="String">
+                </JVariableDeclarator>
+              </VariableDeclarators>
+            </JVariableDeclaration>
+            <JSwitchStatement line="18">
+              <Case>              <JLiteralInt line="23" type="" value="1"/>
+              <JStatementExpression line="23">
+                <JBinaryExpression line="23" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="23" type="" value="&quot;January&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="24"/>
+              <JEmptyStatement line="24"/>
+              <Case>              <JLiteralInt line="25" type="" value="2"/>
+              <JStatementExpression line="25">
+                <JBinaryExpression line="25" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="25" type="" value="&quot;February&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="26"/>
+              <JEmptyStatement line="26"/>
+              <Case>              <JLiteralInt line="27" type="" value="3"/>
+              <JStatementExpression line="27">
+                <JBinaryExpression line="27" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="27" type="" value="&quot;March&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="28"/>
+              <JEmptyStatement line="28"/>
+              <Case>              <JLiteralInt line="29" type="" value="4"/>
+              <JStatementExpression line="29">
+                <JBinaryExpression line="29" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="29" type="" value="&quot;April&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="30"/>
+              <JEmptyStatement line="30"/>
+              <Case>              <JLiteralInt line="31" type="" value="5"/>
+              <JStatementExpression line="31">
+                <JBinaryExpression line="31" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="31" type="" value="&quot;May&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="32"/>
+              <JEmptyStatement line="32"/>
+              <Case>              <JLiteralInt line="33" type="" value="6"/>
+              <JStatementExpression line="33">
+                <JBinaryExpression line="33" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="33" type="" value="&quot;June&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JSwitchStatement line="34">
+                <Case>                <JLiteralInt line="35" type="" value="1"/>
+                <JStatementExpression line="35">
+                  <JBinaryExpression line="35" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="monthString"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralString line="35" type="" value="&quot;foo&quot;"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JBreakStatement line="36"/>
+                <JEmptyStatement line="36"/>
+                <Case>                <JLiteralInt line="37" type="" value="2"/>
+                <JStatementExpression line="37">
+                  <JBinaryExpression line="37" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="monthString"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralString line="37" type="" value="&quot;bar&quot;"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+                <JBreakStatement line="38"/>
+                <JEmptyStatement line="38"/>
+                <Default>
+                <JStatementExpression line="39">
+                  <JBinaryExpression line="39" type="" operator="=">
+                    <Lhs>
+                      <JVariable name="monthString"/>
+                    </Lhs>
+                    <Rhs>
+                      <JLiteralString line="39" type="" value="&quot;next&quot;"/>
+                    </Rhs>
+                  </JBinaryExpression>
+                </JStatementExpression>
+              </JSwitchStatement line="34">
+              <Case>              <JLiteralInt line="41" type="" value="7"/>
+              <JStatementExpression line="41">
+                <JBinaryExpression line="41" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="41" type="" value="&quot;July&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="42"/>
+              <JEmptyStatement line="42"/>
+              <Case>              <JLiteralInt line="43" type="" value="8"/>
+              <JStatementExpression line="43">
+                <JBinaryExpression line="43" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="43" type="" value="&quot;August&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <JBreakStatement line="44"/>
+              <JEmptyStatement line="44"/>
+              <Case>              <JLiteralInt line="45" type="" value="9"/>
+              <JStatementExpression line="45">
+                <JBinaryExpression line="45" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="45" type="" value="&quot;September&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <Case>              <JLiteralInt line="46" type="" value="10"/>
+              <JStatementExpression line="46">
+                <JBinaryExpression line="46" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="46" type="" value="&quot;October&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <Case>              <JLiteralInt line="47" type="" value="11"/>
+              <JStatementExpression line="47">
+                <JBinaryExpression line="47" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="47" type="" value="&quot;November&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <Case>              <JLiteralInt line="48" type="" value="12"/>
+              <JStatementExpression line="48">
+                <JBinaryExpression line="48" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="48" type="" value="&quot;December&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+              <Default>
+              <JStatementExpression line="49">
+                <JBinaryExpression line="49" type="" operator="=">
+                  <Lhs>
+                    <JVariable name="monthString"/>
+                  </Lhs>
+                  <Rhs>
+                    <JLiteralString line="49" type="" value="&quot;Invalid month&quot;"/>
+                  </Rhs>
+                </JBinaryExpression>
+              </JStatementExpression>
+            </JSwitchStatement line="18">
+          </JBlock>
+        </Body>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="53" name="jmkl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+
+Here is the final abbreviated build run on users.umb.edu,
+
+    [junit] ------------- ---------------- ---------------
+    [junit] 
+    [junit] Testcase: testFail took 0.747 sec
+    [junit] Testcase: testPass took 1.087 sec
+    [javac] Compiling 14 source files to /courses/cs451/f16/wrc/rwilson/hw3/j--/classes
+    [junit] Running junit.JMinusMinusTestRunner
+    [junit] Testsuite: junit.JMinusMinusTestRunner
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.067 sec
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.067 sec
+    [junit] 
+    [junit] Testcase: testMessage took 0.01 sec
+    [junit] Testcase: testFactorial took 0.005 sec
+    [junit] Testcase: testCompute took 0.004 sec
+    [junit] Testcase: testComputeSum took 0.007 sec
+    [junit] Testcase: testMessage took 0.007 sec
+    [junit] Testcase: testDivide took 0.001 sec
+    [junit] Testcase: testModulo took 0.002 sec
+    [junit] Testcase: testUnaryPlus took 0.008 sec
+    [junit] Testcase: testIntBitwise took 0.007 sec
+
+BUILD SUCCESSFUL
+Total time: 2 minutes 56 seconds
+rwilson@vm71:~/cs451/hw3/j--$
+
+Also a couple of last minute modificarions needed to made:
+
+protected was added into JMethodDeclaration here:
+
+ protected ArrayList<jminusminus.Type> excepts;
+
+And in JClassDeclarations private was added here:
+
+//ADDED interfaces                                                          
+    private ArrayList<jminusminus.Type> interfaces;
+
+The abbreviated build and relevant tests are as follows:
+
+    [junit] ------------- ---------------- ---------------
+    [junit] 
+    [junit] Testcase: testFail took 0.674 sec
+    [junit] Testcase: testPass took 0.985 sec
+    [javac] Compiling 14 source files to /courses/cs451/f16/wrc/rwilson/hw3/j--/classes
+    [junit] Running junit.JMinusMinusTestRunner
+    [junit] Testsuite: junit.JMinusMinusTestRunner
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 sec
+    [junit] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 sec
+    [junit] 
+    [junit] Testcase: testMessage took 0.007 sec
+    [junit] Testcase: testFactorial took 0.005 sec
+    [junit] Testcase: testCompute took 0.006 sec
+    [junit] Testcase: testComputeSum took 0.003 sec
+    [junit] Testcase: testMessage took 0.016 sec
+    [junit] Testcase: testDivide took 0.003 sec
+    [junit] Testcase: testModulo took 0.007 sec
+    [junit] Testcase: testUnaryPlus took 0.013 sec
+    [junit] Testcase: testIntBitwise took 0.007 sec
+
+BUILD SUCCESSFUL
+Total time: 33 seconds
+rwilson@vm71:~/cs451/hw3/j--$ bin/j-- -p tests/fail/InterfaceWithMulExts.java
+tests/fail/InterfaceWithMulExts.java:6: jdfljadl found where class sought
+tests/fail/InterfaceWithMulExts.java:6: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/InterfaceWithMulExts.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JInterfaceDeclaration line="3" name="InterfaceWithMulExts" super="    ga    sna    buh     ">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JMethodDeclaration line="4" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JInterfaceDeclaration>
+    <JClassDeclaration line="6" name="jdfljadl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+rwilson@vm71:~/cs451/hw3/j--$ bin/j-- -p tests/fail/ClassWithMulInterfs.java
+tests/fail/ClassWithMulInterfs.java:8: jdfljadl found where class sought
+tests/fail/ClassWithMulInterfs.java:8: <EOF> found where { sought
+<?xml version="1.0" encoding="utf-8"?>
+<JCompilationUnit line="1">
+  <Source fileName="tests/fail/ClassWithMulInterfs.java"/>
+  <Package name="fail"/>
+  <Imports>
+  </Imports>
+  <TypeDeclarations>
+    <JClassDeclaration line="3" name="ClassWithMulInterfs" super="java.lang.Object" implements="    ga    sna    buh     ">
+      <Modifiers>
+        <Modifier name="public"/>
+      </Modifiers>
+      <ClassBlock>
+      <JFieldDeclaration line="4"/>
+        <Modifiers>
+        </Modifiers>
+        <VariableDeclarators>
+          <JVariableDeclarator line="4" name="i" type="int">
+            <Initializer>
+              <JLiteralInt line="4" type="" value="0"/>
+            </Initializer>
+          </JVariableDeclarator>
+        <VariableDeclarators>
+      </JFieldDeclaration>
+      <JMethodDeclaration line="6" name="foo" returnType="void">
+        <Modifiers>
+          <Modifier name="public"/>
+        </Modifiers>
+        <FormalParameters>
+        </FormalParameters>
+      </JMethodDeclaration>
+      </ClassBlock>
+    </JClassDeclaration>
+    <JClassDeclaration line="8" name="jdfljadl" super="java.lang.Object">
+      <Modifiers>
+      </Modifiers>
+      <ClassBlock>
+      </ClassBlock>
+    </JClassDeclaration>
+  </TypeDeclarations>
+</JCompilationUnit>
+rwilson@vm71:~/cs451/hw3/j--$ 
